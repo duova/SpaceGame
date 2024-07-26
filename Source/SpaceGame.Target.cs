@@ -11,5 +11,12 @@ public class SpaceGameTarget : TargetRules
 		DefaultBuildSettings = BuildSettingsVersion.V5;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_4;
 		ExtraModuleNames.Add("SpaceGame");
+		RegisterModulesCreatedByRider();
+		bWithPushModel = true;
+	}
+
+	private void RegisterModulesCreatedByRider()
+	{
+		ExtraModuleNames.AddRange(new string[] { "GameCore" });
 	}
 }
