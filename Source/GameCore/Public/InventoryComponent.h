@@ -78,13 +78,18 @@ public:
 	                           FActorComponentTickFunction* ThisTickFunction) override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	
+
 	void SetItemOwnerNotChecked(FGameplayTag InventoryIdentifier, int32 Index, FInventory& Inventory);
 
 	//Index from GetItems. Returns null if type doesn't exist, index is outside of inventory capacity, or if slot is filled.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	UItem* AddToInventory(const FGameplayTag InventoryIdentifier, const TSubclassOf<UItem> ItemClass, const int32 Count,
 	                      const int32 Index);
+
+	//Index from GetItems. Returns null if type doesn't exist, index is outside of inventory capacity, or if all slots are filled.
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+	bool AddToInventoryAnySlot(const FGameplayTag InventoryIdentifier, const TSubclassOf<UItem> ItemClass,
+	                           const int32 Count, const bool bStackIfPossible = true);
 
 	//Index from GetItems. Returns false if type doesn't exist, index is invalid, or the slot is empty. Count 0 removes the whole stack.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
@@ -100,6 +105,7 @@ public:
 
 	//Attempts to move an item within this UInventoryComponent (LOCAL) to anywhere in another inventory (OTHER).
 	//Returns false if the index, inventories, or the inventory component are invalid, or if there's no space.
+	//Will return false if only a portion of the stack can be moved, but will still do so.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	bool MoveToInventory(UInventoryComponent* OtherInventoryComponent, const FGameplayTag OtherInventoryIdentifier,
 	                     const FGameplayTag LocalInventoryIdentifier,
@@ -114,18 +120,18 @@ public:
 
 	FInventory* GetInventory(const FGameplayTag InventoryIdentifier);
 
-	void OnInput(const UInputAction* Input, const UInputPayload* InputData, FGameplayTag UItem::*EventTag);
-	
+	void OnInput(const UInputAction* Input, const UInputPayload* InputData, FGameplayTag UItem::* EventTag);
+
 	void OnInputDown(const UInputAction* Input, const UInputPayload* InputData);
 
 	void OnInputUp(const UInputAction* Input, const UInputPayload* InputData);
 
 	TMap<FGameplayAbilitySpecHandle, UItem*> AbilityRegistry;
 
-protected:
 	UPROPERTY(Replicated, EditAnywhere, ReplicatedUsing = InternalOnItemUpdate)
 	TArray<FInventory> Inventories;
 
+protected:
 	bool RegisterAbilities(UItem* Item, const FInventory& Inventory);
 
 	bool UnregisterAbilities(UItem* Item);

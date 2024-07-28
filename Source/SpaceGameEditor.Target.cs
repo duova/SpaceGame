@@ -16,6 +16,6 @@ public class SpaceGameEditorTarget : TargetRules
 
 	private void RegisterModulesCreatedByRider()
 	{
-		ExtraModuleNames.AddRange(new string[] { "GameCore" });
+		ExtraModuleNames.AddRange(new string[] { "GameCore", "Buildings" });
 	}
 }

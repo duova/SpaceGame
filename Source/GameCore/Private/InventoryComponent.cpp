@@ -36,7 +36,7 @@ bool FInventory::NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess)
 
 UInventoryComponent::UInventoryComponent()
 {
-	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bCanEverTick = false;
 	SetIsReplicated(true);
 	bReplicateUsingRegisteredSubObjectList = true;
 }
@@ -47,7 +47,7 @@ void UInventoryComponent::BeginPlay()
 
 	Character = Cast<AGameCharacter>(GetOwner());
 
-	if (GetOwnerRole() == ROLE_Authority)
+	if (GetOwner()->HasAuthority())
 	{
 		//Remove duplicate inventory identifiers if necessary.
 		for (int16 i = Inventories.Num() - 1; i >= 0; i--)
@@ -154,6 +154,44 @@ UItem* UInventoryComponent::AddToInventory(const FGameplayTag InventoryIdentifie
 	return nullptr;
 }
 
+bool UInventoryComponent::AddToInventoryAnySlot(const FGameplayTag InventoryIdentifier,
+	const TSubclassOf<UItem> ItemClass, const int32 Count, const bool bStackIfPossible)
+{
+	if (!GetOwner()->HasAuthority()) return false;
+	if (Count < 1) return false;
+
+	int32 MutableCount = Count;
+
+	TArray<UItem*> Items = GetItems(InventoryIdentifier);
+
+	if (bStackIfPossible)
+	{
+		for (UItem* Item : Items)
+		{
+			if (Item->GetClass() != ItemClass) continue;
+			const int32 TransferableCount = FMath::Min(Item->GetMaxStackSize() - Item->Count, Count);
+			Item->Count += TransferableCount;
+			MutableCount -= TransferableCount;
+			MARK_PROPERTY_DIRTY_FROM_NAME(UItem, Count, Item);
+			if (MutableCount <= 0)
+			{
+				return true;
+			}
+		}
+	}
+
+	for (uint16 i = 0; i < Items.Num(); i++)
+	{
+		if (Items[i]->GetClass() == GetInventory(InventoryIdentifier)->EmptyItemClass)
+		{
+			AddToInventory(InventoryIdentifier, ItemClass, MutableCount, i);
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool UInventoryComponent::RemoveFromInventory(const FGameplayTag InventoryIdentifier, const int32 Index,
                                               const int32 Count)
 {
@@ -183,7 +221,7 @@ bool UInventoryComponent::RemoveFromInventory(const FGameplayTag InventoryIdenti
 		}
 	}
 
-	if (GetOwnerRole() == ROLE_Authority)
+	if (GetOwner()->HasAuthority())
 	{
 		InternalOnItemUpdate();
 		//Client side called OnRep.
@@ -333,7 +371,7 @@ bool UInventoryComponent::MoveOrSwapItem(UInventoryComponent* OtherInventoryComp
 	SetItemOwnerNotChecked(OtherInventoryIdentifier, OtherItemIndex, *OtherInventory);
 	
 
-	if (GetOwnerRole() == ROLE_Authority)
+	if (GetOwner()->HasAuthority())
 	{
 		InternalOnItemUpdate();
 		//Client side called OnRep.
@@ -370,7 +408,7 @@ bool UInventoryComponent::MoveToInventory(UInventoryComponent* OtherInventoryCom
 			LocalItem -= TransferableCount;
 			MARK_PROPERTY_DIRTY_FROM_NAME(UItem, Count, Item);
 			MARK_PROPERTY_DIRTY_FROM_NAME(UItem, Count, LocalItem);
-			if (LocalItem->Count == 0)
+			if (LocalItem->Count <= 0)
 			{
 				RemoveFromInventory(LocalInventoryIdentifier, LocalItemIndex);
 				return true;

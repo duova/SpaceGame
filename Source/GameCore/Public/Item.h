@@ -26,6 +26,12 @@ public:
 	UFUNCTION(BlueprintPure)
 	int32 GetMaxStackSize() const;
 
+	UPROPERTY(EditAnywhere)
+	FText DisplayName;
+
+	UPROPERTY(EditAnywhere)
+	UTexture2D* Icon;
+
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	int32 Count;
 
