@@ -9,9 +9,12 @@ public class GameCore : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core",
+                "Core", 
+                "GameplayAbilities",
+                "GameplayTasks",
                 "GameplayTags",
                 "NetCore",
+                "EnhancedInput",
             }
         );
 
@@ -21,7 +24,7 @@ public class GameCore : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
             }
         );
     }

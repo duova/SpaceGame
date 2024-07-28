@@ -3,9 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Abilities/GameplayAbility.h"
 #include "UObject/Object.h"
 #include "Item.generated.h"
 
+class UInventoryComponent;
 /**
  * Stackable item.
  */
@@ -26,6 +28,27 @@ public:
 
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	int32 Count;
+
+	UPROPERTY(EditAnywhere)
+	TArray<TSubclassOf<UGameplayAbility>> ItemAbilities;
+
+	UPROPERTY(Replicated)
+	TArray<FGameplayAbilitySpecHandle> OrderedAbilityHandles;
+
+	UPROPERTY(EditAnywhere)
+	FGameplayTag OnDownEvent;
+
+	UPROPERTY(EditAnywhere)
+	FGameplayTag OnUpEvent;
+
+	UPROPERTY(BlueprintReadOnly, Replicated)
+	UInventoryComponent* OwningInvComp;
+
+	UPROPERTY(BlueprintReadOnly, Replicated)
+	FGameplayTag OwningInvIdentifier;
+
+	UPROPERTY(BlueprintReadOnly, Replicated)
+	int32 OwningInvIndex;
 	
 protected:
 	UPROPERTY(EditAnywhere, meta = (ClampMin = 0))
