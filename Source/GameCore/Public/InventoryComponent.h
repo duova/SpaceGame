@@ -9,6 +9,7 @@
 #include "Components/ActorComponent.h"
 #include "InventoryComponent.generated.h"
 
+struct FItemDescriptor;
 class UInputPayload;
 class AGameCharacter;
 class UItem;
@@ -111,6 +112,10 @@ public:
 	                     const FGameplayTag LocalInventoryIdentifier,
 	                     const int32 LocalItemIndex, const bool bStackIfPossible = true);
 
+	//Removes requested items, only if they are all available.
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+	bool RemoveItemsBatched(const TArray<FItemDescriptor>& Items);
+
 	//Returns the inventory as an array of items including the items representing empty slots. Empty if not found.
 	UFUNCTION(BlueprintPure)
 	TArray<UItem*> GetItems(const FGameplayTag InventoryIdentifier) const;
@@ -140,6 +145,8 @@ public:
 
 	UPROPERTY(Replicated, EditAnywhere, ReplicatedUsing = InternalOnItemUpdate)
 	TArray<FInventory> Inventories;
+	
+	static TMap<const TSubclassOf<UItem>, int32> GetJoinedRequirements(const TArray<FItemDescriptor>& Items);
 
 protected:
 	bool RegisterAbilities(UItem* Item, const FInventory& Inventory);

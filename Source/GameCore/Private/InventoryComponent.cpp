@@ -6,6 +6,7 @@
 #include "AbilitySystemComponent.h"
 #include "GameCharacter.h"
 #include "GameCore.h"
+#include "GameGs.h"
 #include "GamePlayerController.h"
 #include "Item.h"
 #include "Net/UnrealNetwork.h"
@@ -230,6 +231,23 @@ bool UInventoryComponent::RemoveItem(const FGameplayTag InventoryIdentifier, con
 	return false;
 }
 
+TMap<const TSubclassOf<UItem>, int32> UInventoryComponent::GetJoinedRequirements(const TArray<FItemDescriptor>& Items)
+{
+	TMap<const TSubclassOf<UItem>, int32> JoinedItemRequirements;
+	for (const FItemDescriptor& Descriptor : Items)
+	{
+		if (!JoinedItemRequirements.Contains(Descriptor.ItemClass))
+		{
+			JoinedItemRequirements.Add(Descriptor.ItemClass, Descriptor.ItemCount);
+		}
+		else
+		{
+			JoinedItemRequirements[Descriptor.ItemClass] += Descriptor.ItemCount;
+		}
+	}
+	return JoinedItemRequirements;
+}
+
 bool UInventoryComponent::RegisterAbilities(UItem* Item, const FInventory& Inventory)
 {
 	if (!GetOwner()->HasAuthority()) return false;
@@ -429,6 +447,35 @@ bool UInventoryComponent::MoveItemAnySlot(UInventoryComponent* OtherInventoryCom
 	return false;
 }
 
+bool UInventoryComponent::RemoveItemsBatched(const TArray<FItemDescriptor>& Items)
+{
+	TMap<const TSubclassOf<UItem>, int32> JoinedItemRequirements = GetJoinedRequirements(Items);
+	TMap<const TSubclassOf<UItem>, int32> JoinedItemRequirementsCopy = JoinedItemRequirements;
+	for (const UItem* Item : GetItemsInAllInventories())
+	{
+		if (!JoinedItemRequirementsCopy.Contains(Item->GetClass())) continue;
+		JoinedItemRequirementsCopy[Item->GetClass()] -= Item->Count;
+	}
+	for (const TPair<const TSubclassOf<UItem>, int32>& Pair : JoinedItemRequirementsCopy)
+	{
+		if (Pair.Value > 0) return false;
+	}
+
+	for (FInventory& Inventory : Inventories)
+	{
+		for (uint16 i = 0; i < Inventory.Items.Num(); i++)
+		{
+			const UItem* Item = Inventory.Items[i];
+			if (!JoinedItemRequirements.Contains(Item->GetClass())) continue;
+			const int32 TransferCount = FMath::Min(Item->Count, JoinedItemRequirements[Item->GetClass()]);
+			RemoveItem(Inventory.InventoryIdentifier, i, TransferCount);
+			JoinedItemRequirements[Item->GetClass()] -= TransferCount;
+		}
+	}
+
+	return true;
+}
+
 TArray<UItem*> UInventoryComponent::GetItems(const FGameplayTag InventoryIdentifier) const
 {
 	for (const FInventory& Inventory : Inventories)
@@ -462,11 +509,13 @@ TArray<UItem*> UInventoryComponent::GetItemsInAllInventories() const
 
 bool UInventoryComponent::IncreaseCapacity(const FGameplayTag InventoryIdentifier, const int32 Count)
 {
+	const int32 ClampedCount = FMath::Max(0, Count);
+	if (ClampedCount == 0) return false;
 	FInventory* Inventory = GetInventory(InventoryIdentifier);
 	if (!Inventory) return false;
-	Inventory->Capacity += Count;
+	Inventory->Capacity += ClampedCount;
 	
-	for (uint16 i = 0; i < Count; i++)
+	for (uint16 i = 0; i < ClampedCount; i++)
 	{
 		const uint16 Index = Inventory->Items.Emplace(NewObject<UItem>(this, Inventory->EmptyItemClass));
 		AddReplicatedSubObject(Inventory->Items[Index]);

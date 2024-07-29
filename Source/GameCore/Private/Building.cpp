@@ -3,6 +3,9 @@
 
 #include "Building.h"
 
+#include "GameGs.h"
+#include "InventoryComponent.h"
+#include "Item.h"
 #include "Net/UnrealNetwork.h"
 
 
@@ -16,6 +19,20 @@ ABuilding::ABuilding()
 int32 ABuilding::GetTier() const
 {
 	return Tier;
+}
+
+bool ABuilding::PurchaseUpgrade(UInventoryComponent* Source)
+{
+	if (!HasAuthority()) return false;
+	
+	const int32 UpgradeTier = Tier + 1;
+	if (UpgradeTier >= Tiers.Num()) return false;
+
+	if (!Source->RemoveItemsBatched(Tiers[UpgradeTier].Cost)) return false;
+
+	ChangeTier(UpgradeTier);
+	
+	return true;
 }
 
 bool ABuilding::ChangeTier(const int32 NewTier)
@@ -64,7 +81,7 @@ void ABuilding::HandleAwaitingUpgradeAnimationOnTick()
 void ABuilding::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
+
 	HandleAwaitingUpgradeAnimationOnTick();
 }
 
@@ -79,3 +96,7 @@ void ABuilding::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	DOREPLIFETIME_WITH_PARAMS_FAST(ABuilding, UpgradeLockedBy, RepParams);
 }
 
+bool ABuilding::CanUpgrade() const
+{
+	return Tier < Tiers.Num() - 1;
+}

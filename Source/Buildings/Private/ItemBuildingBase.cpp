@@ -4,18 +4,19 @@
 #include "ItemBuildingBase.h"
 
 #include "BuildSlotComponent.h"
+#include "GameCharacter.h"
+#include "GameGs.h"
 #include "InventoryComponent.h"
 #include "Item.h"
-#include "RecipeCatalog.h"
 #include "WarehouseBuildingBase.h"
 
 AItemBuildingBase::AItemBuildingBase()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.TickInterval = 1;
+	PrimaryActorTick.TickInterval = 2;
 	Buffer = CreateDefaultSubobject<UInventoryComponent>("Buffer");
 	FInventory BufferInventory;
-	BufferInventory.Capacity = 100;
+	BufferInventory.Capacity = 20;
 	BufferInventory.InventoryIdentifier = FGameplayTag();
 	BufferInventory.EmptyItemClass = UItem::StaticClass();
 	Buffer->Inventories.Add(BufferInventory);
@@ -45,33 +46,16 @@ bool AItemBuildingBase::HasItems(const TArray<FItemDescriptor>& Items)
 {
 	RefreshNearbyInventories();
 
-	const TMap<const TSubclassOf<UItem>, int32> JoinedItemRequirements = GetJoinedRequirements(Items);
+	const TMap<const TSubclassOf<UItem>, int32> JoinedItemRequirements = UInventoryComponent::GetJoinedRequirements(Items);
 
 	return InternalHasItems(JoinedItemRequirements);
-}
-
-TMap<const TSubclassOf<UItem>, int32> AItemBuildingBase::GetJoinedRequirements(const TArray<FItemDescriptor>& Items)
-{
-	TMap<const TSubclassOf<UItem>, int32> JoinedItemRequirements;
-	for (const FItemDescriptor& Descriptor : Items)
-	{
-		if (!JoinedItemRequirements.Contains(Descriptor.ItemClass))
-		{
-			JoinedItemRequirements.Add(Descriptor.ItemClass, Descriptor.ItemCount);
-		}
-		else
-		{
-			JoinedItemRequirements[Descriptor.ItemClass] += Descriptor.ItemCount;
-		}
-	}
-	return JoinedItemRequirements;
 }
 
 bool AItemBuildingBase::InputItems(const TArray<FItemDescriptor>& Items, const bool bAssumeEnoughItems)
 {
 	RefreshNearbyInventories();
 
-	TMap<const TSubclassOf<UItem>, int32> JoinedItemRequirements = GetJoinedRequirements(Items);
+	TMap<const TSubclassOf<UItem>, int32> JoinedItemRequirements =  UInventoryComponent::GetJoinedRequirements(Items);
 	
 	if (!bAssumeEnoughItems && !InternalHasItems(JoinedItemRequirements)) return false;
 
@@ -125,19 +109,22 @@ void AItemBuildingBase::RefreshNearbyInventories()
 
 	NearbyInventories.Empty();
 
-	for (UBuildSlotComponent* NearbySlot : Slots)
+	for (const UBuildSlotComponent* NearbySlot : Slots)
 	{
 		if (NearbySlot == Slot) continue;
 		AWarehouseBuildingBase* Warehouse = Cast<AWarehouseBuildingBase>(NearbySlot->CurrentBuilding);
 		if (!Warehouse) continue;
 		NearbyInventories.Add(Warehouse->InventoryComponent);
 	}
+	
+	NearbyInventories.Sort([this](const UInventoryComponent& A, const UInventoryComponent& B)
+	{
+		return A.Character->GetSquaredDistanceTo(this) < B.Character->GetSquaredDistanceTo(this);
+	});
 }
 
 bool AItemBuildingBase::TryFlush()
 {
-	bool bSuccess = true;
-	
 	RefreshNearbyInventories();
 
 	for (UInventoryComponent* InvComp : NearbyInventories)
@@ -155,17 +142,24 @@ bool AItemBuildingBase::TryFlush()
 			for (uint16 i = 0; i < Items.Num(); i++)
 			{
 				if (Items[i]->GetClass() == UItem::StaticClass()) continue;
-				bSuccess &= InvComp->MoveItemAnySlot(InvComp, Id, FGameplayTag(), i);
+				InvComp->MoveItemAnySlot(InvComp, Id, FGameplayTag(), i);
 			}
 		}
 	}
 
-	return bSuccess;
+	for (const UItem* Item : Buffer->GetItems(FGameplayTag()))
+	{
+		if (Item->GetClass() != Buffer->GetInventory(FGameplayTag())->EmptyItemClass) return false;
+	}
+	
+	return true;
 }
 
 void AItemBuildingBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	if (!HasAuthority()) return;
 
 	if (!IsOutputLocked()) return;
 

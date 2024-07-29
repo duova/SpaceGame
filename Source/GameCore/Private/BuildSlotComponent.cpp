@@ -4,6 +4,7 @@
 #include "BuildSlotComponent.h"
 
 #include "Building.h"
+#include "InventoryComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Net/Core/PushModel/PushModel.h"
 
@@ -64,17 +65,30 @@ bool UBuildSlotComponent::ChangeBuilding(const TSubclassOf<ABuilding>& BuildingC
 	if (!GetOwner()->HasAuthority()) return false;
 
 	if (!bEnabled) return false;
-	
+
 	CurrentBuilding->Destroy(true);
-	
+
 	CurrentBuilding = NewObject<ABuilding>(this, BuildingClass);
-	
+
 	CurrentBuilding->AttachToComponent(this, FAttachmentTransformRules(EAttachmentRule::SnapToTarget,
-																	   EAttachmentRule::SnapToTarget,
-																	   EAttachmentRule::SnapToTarget, false));
+	                                                                   EAttachmentRule::SnapToTarget,
+	                                                                   EAttachmentRule::SnapToTarget, false));
 
 	MARK_PROPERTY_DIRTY_FROM_NAME(ABuilding, Slot, CurrentBuilding);
 	MARK_PROPERTY_DIRTY_FROM_NAME(UBuildSlotComponent, CurrentBuilding, this);
+
+	return true;
+}
+
+bool UBuildSlotComponent::PurchaseBuilding(const TSubclassOf<ABuilding>& BuildingClass, UInventoryComponent* Source)
+{
+	if (!GetOwner()->HasAuthority()) return false;
+
+	ABuilding* CDO = BuildingClass->GetDefaultObject<ABuilding>();
+	if (CDO->Tiers.Num() == 0) return false;
+	if (!Source->RemoveItemsBatched(CDO->Tiers[0].Cost)) return false;
+
+	ChangeBuilding(BuildingClass);
 
 	return true;
 }

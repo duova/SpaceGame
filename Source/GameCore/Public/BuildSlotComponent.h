@@ -7,6 +7,8 @@
 #include "BuildSlotComponent.generated.h"
 
 
+class UInventoryComponent;
+class UItem;
 class ABuilding;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), Blueprintable)
@@ -31,7 +33,7 @@ protected:
 
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<ABuilding> DefaultBuilding;
 
 	bool bEnabled;
@@ -45,6 +47,15 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	bool ChangeBuilding(const TSubclassOf<ABuilding>& BuildingClass);
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 UnlockTier = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSubclassOf<UItem> Resource;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (ClampMin = 0))
+	int32 ResourceRatePerMinute;
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+	bool PurchaseBuilding(const TSubclassOf<ABuilding>& BuildingClass, UInventoryComponent* Source);
 };

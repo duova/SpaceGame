@@ -3,110 +3,62 @@
 
 #include "FactoryBuildingBase.h"
 
-#include "GameGi.h"
-#include "RecipeCatalog.h"
+#include "GameGs.h"
 #include "Net/UnrealNetwork.h"
 #include "Net/Core/PushModel/PushModel.h"
 
 
-AFactoryBuildingBase::AFactoryBuildingBase()
+AFactoryBuildingBase::AFactoryBuildingBase(): Progress(0), RemainingCount(0), Status()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.TickInterval = 0.2;
 }
 
-EBuildingRecipeValidationResult AFactoryBuildingBase::TargetBuildingValid(
-	const ABuilding* TargetBuilding, const FRecipe& Recipe) const
+bool AFactoryBuildingBase::ChangeRecipe(const int32 RecipeId)
 {
-	if (!TargetBuilding) return EBuildingRecipeValidationResult::Null;
-	if (Recipe.Result.Num() <= 0) return EBuildingRecipeValidationResult::RecipeHasNoOutputs;
-	const UBuildingRecipeResult* BuildingResult = Cast<UBuildingRecipeResult>(Recipe.Result[0]);
-	if (!BuildingResult) return EBuildingRecipeValidationResult::NotABuildingRecipe;
-	if (!TargetBuilding->IsA(BuildingResult->GetClass())) return EBuildingRecipeValidationResult::BuildingClassMismatch;
-	if (TargetBuilding->Tiers.Num() <= BuildingResult->BuildingTier) return
-		EBuildingRecipeValidationResult::InvalidBuildingTier;
-	if (BuildingResult->BuildingTier <= TargetBuilding->GetTier()) return EBuildingRecipeValidationResult::NotAnUpgrade;
-	if (TargetBuilding->UpgradeLockedBy && TargetBuilding->UpgradeLockedBy != this) return
-		EBuildingRecipeValidationResult::UpgradedByOtherFactory;
-	return EBuildingRecipeValidationResult::Success;
-}
-
-bool AFactoryBuildingBase::CanPerformRecipe(const int32 RecipeId, const ABuilding* TargetBuilding)
-{
-	if (GameInstance->RecipeCatalog->Recipes.Num() <= RecipeId) return false;
-	if (GameInstance->RecipeUnlocks.Num() <= RecipeId) return false;
-	if (!GameInstance->RecipeUnlocks[RecipeId]) return false;
-	const FRecipe& Recipe = GameInstance->RecipeCatalog[RecipeId].Recipes[RecipeId];
-	if (TargetBuildingValid(TargetBuilding, Recipe) != EBuildingRecipeValidationResult::Success) return false;
-	return HasItems(Recipe.Inputs);
-}
-
-EBuildingRecipeValidationResult AFactoryBuildingBase::ChangeRecipe(const int32 RecipeId, ABuilding* TargetBuilding)
-{
-	if (GameInstance->RecipeCatalog->Recipes.Num() <= RecipeId) return EBuildingRecipeValidationResult::InvalidRecipeId;
-	const FRecipe& Recipe = GameInstance->RecipeCatalog[RecipeId].Recipes[RecipeId];
-	if (TargetBuilding)
-	{
-		EBuildingRecipeValidationResult Validation = TargetBuildingValid(TargetBuilding, Recipe);
-		if (Validation != EBuildingRecipeValidationResult::Success) return Validation;
-	}
+	if (!HasAuthority()) return false;
+	if (GameState->Recipes.Num() <= RecipeId) return false;
+	if (!GameState->Recipes[RecipeId].bUnlocked) return false;
 
 	if (CurrentRecipe != INDEX_NONE && Status == EFactoryStatus::Running)
 	{
-		OutputItems(GameInstance->RecipeCatalog->Recipes[CurrentRecipe].Inputs);
+		OutputItems(GameState->Recipes[CurrentRecipe].Inputs);
 	}
 
-	UnlockBuildingPostUpgrade();
 	Progress = 0;
 	RemainingCount = 0;
 	CurrentRecipe = RecipeId;
 	Status = EFactoryStatus::IdleNoCount;
-	TryLockBuildingForUpgrade(TargetBuilding);
 
 	MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, Progress, this);
 	MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, CurrentRecipe, this);
 	MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, RemainingCount, this);
 	MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, Status, this);
 
-	return EBuildingRecipeValidationResult::Success;
+	return true;
 }
 
-void AFactoryBuildingBase::SetCount(const int32 Count)
+bool AFactoryBuildingBase::SetCount(const int32 Count)
 {
+	if (!HasAuthority()) return false;
+	RemainingCount = FMath::Max(0, Count);
+	MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, RemainingCount, this);
+	return true;
 }
 
-void AFactoryBuildingBase::ChangeCount(const int32 Count)
+bool AFactoryBuildingBase::ChangeCount(const int32 Count)
 {
+	if (!HasAuthority()) return false;
+	RemainingCount = FMath::Max(0, Count + RemainingCount);
+	MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, RemainingCount, this);
+	return true;
 }
 
 void AFactoryBuildingBase::BeginPlay()
 {
 	Super::BeginPlay();
 
-	GameInstance = Cast<UGameGi>(GetGameInstance());
-}
-
-void AFactoryBuildingBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	Super::EndPlay(EndPlayReason);
-
-	UnlockBuildingPostUpgrade();
-}
-
-bool AFactoryBuildingBase::TryLockBuildingForUpgrade(ABuilding* Building)
-{
-	if (Building->UpgradeLockedBy) return false;
-	Building->UpgradeLockedBy = this;
-	LockedBuilding = Building;
-	return true;
-}
-
-bool AFactoryBuildingBase::UnlockBuildingPostUpgrade()
-{
-	if (!LockedBuilding) return false;
-	LockedBuilding->UpgradeLockedBy = nullptr;
-	LockedBuilding = nullptr;
-	return true;
+	GameState = Cast<AGameGs>(GetWorld()->GetGameState());
 }
 
 void AFactoryBuildingBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -122,10 +74,69 @@ void AFactoryBuildingBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME_WITH_PARAMS_FAST(AFactoryBuildingBase, Status, RepParams);
 }
 
+void AFactoryBuildingBase::RunRecipe()
+{
+	RemainingCount--;
+	MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, RemainingCount, this);
+	Status = EFactoryStatus::Running;
+}
+
+void AFactoryBuildingBase::CheckAndStart(const FRecipe& Recipe)
+{
+	if (!HasItems(Recipe.Inputs))
+	{
+		Status = EFactoryStatus::IdleNoInput;
+		MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, Status, this);
+	}
+	else if (IsOutputLocked())
+	{
+		Status = EFactoryStatus::IdleNoOutput;
+		MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, Status, this);
+	}
+	else
+	{
+		RunRecipe();
+	}
+}
+
 void AFactoryBuildingBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	//Ensure we only start a recipe if the output isn't locked so we can switch recipes and not fill up the buffer if
-	//there are no outputs.
+	if (!GetOwner()->HasAuthority()) return;
+	
+	if (CurrentRecipe < 0) return;
+	if (CurrentRecipe >= GameState->Recipes.Num()) return;
+	const FRecipe& Recipe = GameState->Recipes[CurrentRecipe];
+	const uint16 SpeedMultiplierTier = FMath::Min(Tier, TierSpeedMultipliers.Num() - 1);
+
+	if (Status == EFactoryStatus::Running)
+	{
+		Progress += DeltaTime * TierSpeedMultipliers[SpeedMultiplierTier] / Recipe.RecipeBaseTime;
+		MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, Progress, this);
+	}
+
+	if (Progress > 1)
+	{
+		if (RemainingCount > 0)
+		{
+			Progress -= 1.0;
+			MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, Progress, this);
+			OutputItems(Recipe.Result);
+			CheckAndStart(Recipe);
+		}
+		else
+		{
+			Status = EFactoryStatus::IdleNoCount;
+			MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, Status, this);
+			Progress = 0;
+			MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, Progress, this);
+			OutputItems(Recipe.Result);
+		}
+	}
+
+	if (RemainingCount > 0 && Status != EFactoryStatus::Running)
+	{
+		CheckAndStart(Recipe);
+	}
 }

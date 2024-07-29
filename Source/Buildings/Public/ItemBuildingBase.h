@@ -51,6 +51,4 @@ private:
 	UInventoryComponent* Buffer;
 	
 	bool InternalHasItems(const TMap<const TSubclassOf<UItem>, int32>& JoinedItemRequirements);
-
-	static TMap<const TSubclassOf<UItem>, int32> AItemBuildingBase::GetJoinedRequirements(const TArray<FItemDescriptor>& Items);
 };

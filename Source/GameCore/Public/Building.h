@@ -3,9 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "GameFramework/Actor.h"
 #include "Building.generated.h"
 
+class UInventoryComponent;
+class UItem;
+struct FItemDescriptor;
 class UBuildSlotComponent;
 
 USTRUCT(BlueprintType)
@@ -25,6 +29,9 @@ struct FTierInfo
 	//Animation when upgrading to this tier.
 	UPROPERTY(EditAnywhere)
 	UAnimMontage* UpgradeAnimation;
+
+	UPROPERTY(EditAnywhere)
+	TArray<FItemDescriptor> Cost;
 };
 
 UCLASS(Abstract, Blueprintable)
@@ -46,6 +53,9 @@ public:
 	
 	UFUNCTION(BlueprintPure)
 	int32 GetTier() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+	bool PurchaseUpgrade(UInventoryComponent* Source);
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	bool ChangeTier(int32 NewTier);
@@ -74,4 +84,8 @@ public:
 
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	ABuilding* UpgradeLockedBy = nullptr;
+
+	UFUNCTION(BlueprintPure)
+	bool CanUpgrade() const;
+
 };

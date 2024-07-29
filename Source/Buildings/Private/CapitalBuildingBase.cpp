@@ -14,6 +14,8 @@ void ACapitalBuildingBase::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (!HasAuthority()) return;
+
 	if (!Slot) return;
 
 	TieredBuildSlots.AddDefaulted(Tiers.Num());

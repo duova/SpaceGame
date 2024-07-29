@@ -11,6 +11,7 @@ public class Buildings : ModuleRules
             {
                 "Core",
                 "GameCore",
+                "NetCore",
             }
         );
 
