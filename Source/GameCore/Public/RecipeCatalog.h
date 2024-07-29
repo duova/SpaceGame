@@ -9,16 +9,15 @@
 class ABuilding;
 class UItem;
 
-UCLASS(EditInlineNew)
-class GAMECORE_API UItemDescriptor : public UObject
+USTRUCT(BlueprintType)
+struct GAMECORE_API FItemDescriptor
 {
 	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditAnywhere)
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<UItem> ItemClass;
 
-	UPROPERTY(EditAnywhere, meta = (ClampMin = 0))
+	UPROPERTY(EditAnywhere, meta = (ClampMin = 0), BlueprintReadOnly)
 	int32 ItemCount;
 };
 
@@ -34,11 +33,11 @@ class GAMECORE_API UItemRecipeResult : public URecipeResult
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, Instanced)
-	TArray<UItemDescriptor*> Items;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FItemDescriptor> Items;
 };
 
-UCLASS()
+UCLASS(BlueprintType)
 class GAMECORE_API UBuildingRecipeResult : public URecipeResult
 {
 	GENERATED_BODY()
@@ -51,27 +50,28 @@ public:
 	int32 BuildingTier;
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FRecipe
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FText DisplayName;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	UTexture2D* Icon;
 	
-	UPROPERTY(EditAnywhere, Instanced)
-	TArray<UItemDescriptor*> ResearchCost;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FItemDescriptor> ResearchCost;
 	
-	UPROPERTY(EditAnywhere, Instanced)
-	TArray<UItemDescriptor*> Inputs;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FItemDescriptor> Inputs;
 	
-	UPROPERTY(EditAnywhere, meta = (ClampMin = 0))
+	UPROPERTY(EditAnywhere, meta = (ClampMin = 0), BlueprintReadOnly)
 	float RecipeBaseTime;
-	
-	UPROPERTY(EditAnywhere, Instanced)
+
+	//Only items support multi-result. Only the building at index 0 will be used.
+	UPROPERTY(EditAnywhere, Instanced, BlueprintReadOnly)
 	TArray<URecipeResult*> Result;
 };
 

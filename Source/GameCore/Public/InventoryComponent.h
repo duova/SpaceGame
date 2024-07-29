@@ -15,33 +15,33 @@ class UItem;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnItemUpdate);
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FInventory
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FGameplayTag InventoryIdentifier;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TArray<UItem*> Items;
 
-	UPROPERTY(EditAnywhere, meta = (ClampMin = 0))
+	UPROPERTY(EditAnywhere, meta = (ClampMin = 0), BlueprintReadOnly)
 	int32 Capacity;
 
 	//Input bindings for the item slots of this inventory.
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<UInputAction*> OrderedInputBindings;
 
 	//True to bind inputs to active abilities.
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	bool bBindInputs;
 
 	//True to allow passive and active abilities to work.
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	bool bCanUseAbilities;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<UItem> EmptyItemClass;
 
 	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess);
@@ -83,17 +83,17 @@ public:
 
 	//Index from GetItems. Returns null if type doesn't exist, index is outside of inventory capacity, or if slot is filled.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
-	UItem* AddToInventory(const FGameplayTag InventoryIdentifier, const TSubclassOf<UItem> ItemClass, const int32 Count,
+	UItem* AddItem(const FGameplayTag InventoryIdentifier, const TSubclassOf<UItem> ItemClass, const int32 Count,
 	                      const int32 Index);
 
 	//Index from GetItems. Returns null if type doesn't exist, index is outside of inventory capacity, or if all slots are filled.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
-	bool AddToInventoryAnySlot(const FGameplayTag InventoryIdentifier, const TSubclassOf<UItem> ItemClass,
+	bool AddItemAnySlot(const FGameplayTag InventoryIdentifier, const TSubclassOf<UItem> ItemClass,
 	                           const int32 Count, const bool bStackIfPossible = true);
 
 	//Index from GetItems. Returns false if type doesn't exist, index is invalid, or the slot is empty. Count 0 removes the whole stack.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
-	bool RemoveFromInventory(const FGameplayTag InventoryIdentifier, const int32 Index, const int32 Count = 0);
+	bool RemoveItem(const FGameplayTag InventoryIdentifier, const int32 Index, const int32 Count = 0);
 
 	//Attempts to move an item within this UInventoryComponent (LOCAL) to a specified index of any inventory (OTHER).
 	//Swaps instead if an item already exists there. Optionally stacks LOCAL on OTHER if they're the same class.
@@ -107,13 +107,23 @@ public:
 	//Returns false if the index, inventories, or the inventory component are invalid, or if there's no space.
 	//Will return false if only a portion of the stack can be moved, but will still do so.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
-	bool MoveToInventory(UInventoryComponent* OtherInventoryComponent, const FGameplayTag OtherInventoryIdentifier,
+	bool MoveItemAnySlot(UInventoryComponent* OtherInventoryComponent, const FGameplayTag OtherInventoryIdentifier,
 	                     const FGameplayTag LocalInventoryIdentifier,
 	                     const int32 LocalItemIndex, const bool bStackIfPossible = true);
 
 	//Returns the inventory as an array of items including the items representing empty slots. Empty if not found.
 	UFUNCTION(BlueprintPure)
 	TArray<UItem*> GetItems(const FGameplayTag InventoryIdentifier) const;
+
+	UFUNCTION(BlueprintPure)
+	int32 GetIndex(UItem* Item, const FGameplayTag InventoryIdentifier);
+
+	//Returns the items of all arrays NOT including the items representing empty slots. Empty if not found.
+	UFUNCTION(BlueprintPure)
+	TArray<UItem*> GetItemsInAllInventories() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+	bool IncreaseCapacity(const FGameplayTag InventoryIdentifier, const int32 Count);
 
 	UPROPERTY(BlueprintAssignable)
 	FOnItemUpdate OnItemUpdate;

@@ -23,7 +23,7 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void Disable();
 
-	UPROPERTY(Replicated)
+	UPROPERTY(Replicated, BlueprintReadOnly)
 	ABuilding* CurrentBuilding;
 
 protected:

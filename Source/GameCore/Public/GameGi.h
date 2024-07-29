@@ -16,6 +16,7 @@ class GAMECORE_API UGameGi : public UGameInstance
 {
 	GENERATED_BODY()
 
+public:
 	UPROPERTY(EditAnywhere)
 	URecipeCatalog* RecipeCatalog;
 	

@@ -119,7 +119,7 @@ void UInventoryComponent::SetItemOwnerNotChecked(const FGameplayTag InventoryIde
 	MARK_PROPERTY_DIRTY_FROM_NAME(UItem, OwningInvIndex, Inventory.Items[Index]);
 }
 
-UItem* UInventoryComponent::AddToInventory(const FGameplayTag InventoryIdentifier, const TSubclassOf<UItem> ItemClass,
+UItem* UInventoryComponent::AddItem(const FGameplayTag InventoryIdentifier, const TSubclassOf<UItem> ItemClass,
                                            const int32 Count, const int32 Index)
 {
 	if (!GetOwner()->HasAuthority()) return nullptr;
@@ -154,7 +154,7 @@ UItem* UInventoryComponent::AddToInventory(const FGameplayTag InventoryIdentifie
 	return nullptr;
 }
 
-bool UInventoryComponent::AddToInventoryAnySlot(const FGameplayTag InventoryIdentifier,
+bool UInventoryComponent::AddItemAnySlot(const FGameplayTag InventoryIdentifier,
 	const TSubclassOf<UItem> ItemClass, const int32 Count, const bool bStackIfPossible)
 {
 	if (!GetOwner()->HasAuthority()) return false;
@@ -184,7 +184,7 @@ bool UInventoryComponent::AddToInventoryAnySlot(const FGameplayTag InventoryIden
 	{
 		if (Items[i]->GetClass() == GetInventory(InventoryIdentifier)->EmptyItemClass)
 		{
-			AddToInventory(InventoryIdentifier, ItemClass, MutableCount, i);
+			AddItem(InventoryIdentifier, ItemClass, MutableCount, i);
 			return true;
 		}
 	}
@@ -192,7 +192,7 @@ bool UInventoryComponent::AddToInventoryAnySlot(const FGameplayTag InventoryIden
 	return false;
 }
 
-bool UInventoryComponent::RemoveFromInventory(const FGameplayTag InventoryIdentifier, const int32 Index,
+bool UInventoryComponent::RemoveItem(const FGameplayTag InventoryIdentifier, const int32 Index,
                                               const int32 Count)
 {
 	if (!GetOwner()->HasAuthority()) return false;
@@ -361,7 +361,7 @@ bool UInventoryComponent::MoveOrSwapItem(UInventoryComponent* OtherInventoryComp
 	{
 		Other->Count += Local->Count;
 		MARK_PROPERTY_DIRTY_FROM_NAME(UItem, Count, Other);
-		RemoveFromInventory(LocalInventoryIdentifier, LocalItemIndex);
+		RemoveItem(LocalInventoryIdentifier, LocalItemIndex);
 	}
 
 	InternalMoveOrSwapItems(OtherInventoryComponent, OtherItemIndex, LocalItemIndex, Other, OtherInventory, Local,
@@ -380,7 +380,7 @@ bool UInventoryComponent::MoveOrSwapItem(UInventoryComponent* OtherInventoryComp
 	return true;
 }
 
-bool UInventoryComponent::MoveToInventory(UInventoryComponent* OtherInventoryComponent,
+bool UInventoryComponent::MoveItemAnySlot(UInventoryComponent* OtherInventoryComponent,
                                           const FGameplayTag OtherInventoryIdentifier,
                                           const FGameplayTag LocalInventoryIdentifier,
                                           const int32 LocalItemIndex, const bool bStackIfPossible)
@@ -410,7 +410,7 @@ bool UInventoryComponent::MoveToInventory(UInventoryComponent* OtherInventoryCom
 			MARK_PROPERTY_DIRTY_FROM_NAME(UItem, Count, LocalItem);
 			if (LocalItem->Count <= 0)
 			{
-				RemoveFromInventory(LocalInventoryIdentifier, LocalItemIndex);
+				RemoveItem(LocalInventoryIdentifier, LocalItemIndex);
 				return true;
 			}
 		}
@@ -439,6 +439,49 @@ TArray<UItem*> UInventoryComponent::GetItems(const FGameplayTag InventoryIdentif
 		}
 	}
 	return TArray<UItem*>();
+}
+
+int32 UInventoryComponent::GetIndex(UItem* Item, const FGameplayTag InventoryIdentifier)
+{
+	return GetInventory(InventoryIdentifier)->Items.Find(Item);
+}
+
+TArray<UItem*> UInventoryComponent::GetItemsInAllInventories() const
+{
+	TArray<UItem*> RetVal;
+	for (const FInventory& Inventory : Inventories)
+	{
+		for (UItem* Item : Inventory.Items)
+		{
+			if (Item->GetClass() == Inventory.EmptyItemClass) continue;
+			RetVal.Add(Item);
+		}
+	}
+	return RetVal;
+}
+
+bool UInventoryComponent::IncreaseCapacity(const FGameplayTag InventoryIdentifier, const int32 Count)
+{
+	FInventory* Inventory = GetInventory(InventoryIdentifier);
+	if (!Inventory) return false;
+	Inventory->Capacity += Count;
+	
+	for (uint16 i = 0; i < Count; i++)
+	{
+		const uint16 Index = Inventory->Items.Emplace(NewObject<UItem>(this, Inventory->EmptyItemClass));
+		AddReplicatedSubObject(Inventory->Items[Index]);
+		MARK_PROPERTY_DIRTY_FROM_NAME(UItem, Count, Inventory->Items[Index]);
+		RegisterAbilities(Inventory->Items[Index], *Inventory);
+		MARK_PROPERTY_DIRTY_FROM_NAME(UItem, OrderedAbilityHandles, Inventory->Items[Index]);
+		Inventory->Items[Index]->OwningInvComp = this;
+		MARK_PROPERTY_DIRTY_FROM_NAME(UItem, OwningInvComp, Inventory->Items[Index]);
+		Inventory->Items[Index]->OwningInvIdentifier = Inventory->InventoryIdentifier;
+		MARK_PROPERTY_DIRTY_FROM_NAME(UItem, OwningInvIdentifier, Inventory->Items[Index]);
+		Inventory->Items[Index]->OwningInvIndex = Index;
+		MARK_PROPERTY_DIRTY_FROM_NAME(UItem, OwningInvIndex, Inventory->Items[Index]);
+	}
+	MARK_PROPERTY_DIRTY_FROM_NAME(UInventoryComponent, Inventories, this);
+	return true;
 }
 
 FInventory* UInventoryComponent::GetInventory(const FGameplayTag InventoryIdentifier)

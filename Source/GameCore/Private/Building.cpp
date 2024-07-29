@@ -37,6 +37,7 @@ void ABuilding::MulticastChangeTier_Implementation(const int32 NewTier)
 		Skm->GetAnimInstance()->Montage_Play(Tiers[Tier].UpgradeAnimation);
 		bAwaitingUpgradeAnimation = true;
 	}
+	OnChangeTier();
 }
 
 void ABuilding::BeginPlay()
@@ -44,6 +45,10 @@ void ABuilding::BeginPlay()
 	Super::BeginPlay();
 
 	ChangeTier(0);
+}
+
+void ABuilding::OnChangeTier()
+{
 }
 
 void ABuilding::HandleAwaitingUpgradeAnimationOnTick()
@@ -71,5 +76,6 @@ void ABuilding::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	RepParams.bIsPushBased = true;
 
 	DOREPLIFETIME_WITH_PARAMS_FAST(ABuilding, Slot, RepParams);
+	DOREPLIFETIME_WITH_PARAMS_FAST(ABuilding, UpgradeLockedBy, RepParams);
 }
 

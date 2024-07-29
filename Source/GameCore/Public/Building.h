@@ -8,12 +8,12 @@
 
 class UBuildSlotComponent;
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FTierInfo
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FText TierDisplayName;
 
 	UPROPERTY(EditAnywhere)
@@ -41,7 +41,7 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	FText DisplayName;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FTierInfo> Tiers;
 	
 	UFUNCTION(BlueprintPure)
@@ -55,6 +55,8 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
+	virtual void OnChangeTier();
 	
 	void HandleAwaitingUpgradeAnimationOnTick();
 
@@ -69,4 +71,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	ABuilding* UpgradeLockedBy = nullptr;
 };

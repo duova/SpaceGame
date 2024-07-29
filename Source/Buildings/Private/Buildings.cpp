@@ -2,6 +2,8 @@
 
 #define LOCTEXT_NAMESPACE "FBuildingsModule"
 
+DEFINE_LOG_CATEGORY(LogBuilding);
+
 void FBuildingsModule::StartupModule()
 {
     
