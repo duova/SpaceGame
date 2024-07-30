@@ -9,6 +9,7 @@
 #include "GameCharacter.generated.h"
 
 class UGameAsc;
+
 /**
  * Character for this game with GAS.
  */

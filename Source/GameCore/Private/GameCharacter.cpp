@@ -12,6 +12,7 @@ AGameCharacter::AGameCharacter()
 	PrimaryActorTick.bCanEverTick = true;
 	InventoryComp = CreateDefaultSubobject<UInventoryComponent>("InventoryComponent");
 	SetReplicates(true);
+	ACharacter::SetReplicateMovement(true);
 }
 
 void AGameCharacter::BeginPlay()

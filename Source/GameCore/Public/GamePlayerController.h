@@ -31,7 +31,7 @@ class GAMECORE_API AGamePlayerController : public APlayerController
 public:
 	AGamePlayerController();
 	
-	//Calculate aim location based on mouse or stick input.
+	//Global aim location as the Ai puts in the same params.
 	FVector CurrentAimLocation;
 
 	UPROPERTY(EditAnywhere)

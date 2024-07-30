@@ -110,7 +110,8 @@ void UInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME_WITH_PARAMS_FAST(UInventoryComponent, Inventories, RepParams);
 }
 
-void UInventoryComponent::SetItemOwnerNotChecked(const FGameplayTag InventoryIdentifier, const int32 Index, FInventory& Inventory)
+void UInventoryComponent::SetItemOwnerNotChecked(const FGameplayTag InventoryIdentifier, const int32 Index,
+                                                 FInventory& Inventory)
 {
 	Inventory.Items[Index]->OwningInvComp = this;
 	MARK_PROPERTY_DIRTY_FROM_NAME(UItem, OwningInvComp, Inventory.Items[Index]);
@@ -121,7 +122,7 @@ void UInventoryComponent::SetItemOwnerNotChecked(const FGameplayTag InventoryIde
 }
 
 UItem* UInventoryComponent::AddItem(const FGameplayTag InventoryIdentifier, const TSubclassOf<UItem> ItemClass,
-                                           const int32 Count, const int32 Index)
+                                    const int32 Count, const int32 Index)
 {
 	if (!GetOwner()->HasAuthority()) return nullptr;
 	if (Count < 1) return nullptr;
@@ -156,7 +157,8 @@ UItem* UInventoryComponent::AddItem(const FGameplayTag InventoryIdentifier, cons
 }
 
 bool UInventoryComponent::AddItemAnySlot(const FGameplayTag InventoryIdentifier,
-	const TSubclassOf<UItem> ItemClass, const int32 Count, const bool bStackIfPossible)
+                                         const TSubclassOf<UItem> ItemClass, const int32 Count,
+                                         const bool bStackIfPossible)
 {
 	if (!GetOwner()->HasAuthority()) return false;
 	if (Count < 1) return false;
@@ -194,7 +196,7 @@ bool UInventoryComponent::AddItemAnySlot(const FGameplayTag InventoryIdentifier,
 }
 
 bool UInventoryComponent::RemoveItem(const FGameplayTag InventoryIdentifier, const int32 Index,
-                                              const int32 Count)
+                                     const int32 Count)
 {
 	if (!GetOwner()->HasAuthority()) return false;
 	for (FInventory& Inventory : Inventories)
@@ -377,9 +379,11 @@ bool UInventoryComponent::MoveOrSwapItem(UInventoryComponent* OtherInventoryComp
 
 	if (bStackIfPossible && Other && Local && Other->GetClass() == Local->GetClass())
 	{
-		Other->Count += Local->Count;
+		const uint16 TransferableCount = FMath::Min(Other->GetMaxStackSize() - Other->Count, Local->Count);
+		Other->Count += TransferableCount;
 		MARK_PROPERTY_DIRTY_FROM_NAME(UItem, Count, Other);
-		RemoveItem(LocalInventoryIdentifier, LocalItemIndex);
+		RemoveItem(LocalInventoryIdentifier, LocalItemIndex, TransferableCount);
+		return true;
 	}
 
 	InternalMoveOrSwapItems(OtherInventoryComponent, OtherItemIndex, LocalItemIndex, Other, OtherInventory, Local,
@@ -387,7 +391,7 @@ bool UInventoryComponent::MoveOrSwapItem(UInventoryComponent* OtherInventoryComp
 
 	SetItemOwnerNotChecked(LocalInventoryIdentifier, LocalItemIndex, *LocalInventory);
 	SetItemOwnerNotChecked(OtherInventoryIdentifier, OtherItemIndex, *OtherInventory);
-	
+
 
 	if (GetOwner()->HasAuthority())
 	{
@@ -514,7 +518,7 @@ bool UInventoryComponent::IncreaseCapacity(const FGameplayTag InventoryIdentifie
 	FInventory* Inventory = GetInventory(InventoryIdentifier);
 	if (!Inventory) return false;
 	Inventory->Capacity += ClampedCount;
-	
+
 	for (uint16 i = 0; i < ClampedCount; i++)
 	{
 		const uint16 Index = Inventory->Items.Emplace(NewObject<UItem>(this, Inventory->EmptyItemClass));
@@ -546,7 +550,7 @@ FInventory* UInventoryComponent::GetInventory(const FGameplayTag InventoryIdenti
 }
 
 void UInventoryComponent::OnInput(const UInputAction* Input, const UInputPayload* InputData,
-                                  FGameplayTag UItem::*EventTag)
+                                  FGameplayTag UItem::* EventTag)
 {
 	if (!Character) return;
 	UAbilitySystemComponent* Asc = Character->GetAbilitySystemComponent();
@@ -560,9 +564,11 @@ void UInventoryComponent::OnInput(const UInputAction* Input, const UInputPayload
 		{
 			if (Inventory.OrderedInputBindings[i] != Input) continue;
 			UItem* Item = Inventory.Items[i];
+			Data.OptionalObject2 = Item;
 			for (const FGameplayAbilitySpecHandle Handle : Item->OrderedAbilityHandles)
 			{
-				Asc->TriggerAbilityFromGameplayEvent(Handle, Asc->AbilityActorInfo.Get(), Inventory.Items[i]->*EventTag, &Data, *Asc);
+				Asc->TriggerAbilityFromGameplayEvent(Handle, Asc->AbilityActorInfo.Get(), Inventory.Items[i]->*EventTag,
+				                                     &Data, *Asc);
 			}
 		}
 	}
