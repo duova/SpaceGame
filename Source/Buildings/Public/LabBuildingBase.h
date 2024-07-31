@@ -8,7 +8,7 @@
 
 class AGameGs;
 
-UCLASS()
+UCLASS(Abstract)
 class BUILDINGS_API ALabBuildingBase : public AItemBuildingBase
 {
 	GENERATED_BODY()

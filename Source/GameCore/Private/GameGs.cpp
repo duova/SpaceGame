@@ -6,10 +6,23 @@
 #include "Net/UnrealNetwork.h"
 #include "Net/Core/PushModel/PushModel.h"
 
+FItemDescriptor::FItemDescriptor(): ItemCount(0)
+{
+}
+
+FItemDescriptor::FItemDescriptor(const TSubclassOf<UItem>& InItemClass, const int32 InItemCount): ItemCount(InItemCount)
+{
+	ItemClass = InItemClass;
+}
+
 bool FRecipe::NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess)
 {
 	Ar.SerializeBits(&bUnlocked, 1);
 	return bOutSuccess;
+}
+
+FRecipe::FRecipe(): Icon(nullptr), RecipeBaseTime(0), ResearchBaseTime(0), bUnlocked(false)
+{
 }
 
 AGameGs::AGameGs()

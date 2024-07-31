@@ -26,25 +26,25 @@ public:
 	UFUNCTION(BlueprintPure)
 	int32 GetMaxStackSize() const;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FText DisplayName;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	UTexture2D* Icon;
 
 	UPROPERTY(Replicated, BlueprintReadOnly)
-	int32 Count;
+	int32 Count = 1;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<TSubclassOf<UGameplayAbility>> ItemAbilities;
 
 	UPROPERTY(Replicated)
 	TArray<FGameplayAbilitySpecHandle> OrderedAbilityHandles;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FGameplayTag OnDownEvent;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FGameplayTag OnUpEvent;
 
 	UPROPERTY(BlueprintReadOnly, Replicated)
@@ -57,6 +57,6 @@ public:
 	int32 OwningInvIndex;
 	
 protected:
-	UPROPERTY(EditAnywhere, meta = (ClampMin = 0))
-	int32 MaxStackSize;
+	UPROPERTY(EditAnywhere, meta = (ClampMin = 1), BlueprintReadOnly)
+	int32 MaxStackSize = 1;
 };

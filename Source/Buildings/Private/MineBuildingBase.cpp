@@ -9,7 +9,7 @@
 #include "Net/UnrealNetwork.h"
 
 
-AMineBuildingBase::AMineBuildingBase()
+AMineBuildingBase::AMineBuildingBase(): RatePerMinute(0), UnrealizedResources(0)
 {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickInterval = 2;

@@ -11,7 +11,7 @@
 UBuildSlotComponent::UBuildSlotComponent(): CurrentBuilding(nullptr)
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	SetIsReplicated(true);
+	SetIsReplicatedByDefault(true);
 }
 
 void UBuildSlotComponent::Enable_Implementation()
@@ -41,7 +41,10 @@ void UBuildSlotComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 
-	CurrentBuilding->Destroy(true);
+	if (CurrentBuilding)
+	{
+		CurrentBuilding->Destroy(true);
+	}
 }
 
 void UBuildSlotComponent::TickComponent(float DeltaTime, ELevelTick TickType,
@@ -66,13 +69,21 @@ bool UBuildSlotComponent::ChangeBuilding(const TSubclassOf<ABuilding>& BuildingC
 
 	if (!bEnabled) return false;
 
-	CurrentBuilding->Destroy(true);
+	if (CurrentBuilding)
+	{
+		CurrentBuilding->Destroy(true);
+	}
 
-	CurrentBuilding = NewObject<ABuilding>(this, BuildingClass);
+	CurrentBuilding = GetWorld()->SpawnActor<ABuilding>(BuildingClass);
 
-	CurrentBuilding->AttachToComponent(this, FAttachmentTransformRules(EAttachmentRule::SnapToTarget,
-	                                                                   EAttachmentRule::SnapToTarget,
-	                                                                   EAttachmentRule::SnapToTarget, false));
+	if (CurrentBuilding)
+	{
+		//CurrentBuilding->SetActorTransform(GetComponentTransform());
+	
+		CurrentBuilding->AttachToComponent(this, FAttachmentTransformRules(EAttachmentRule::SnapToTarget,
+																		   EAttachmentRule::SnapToTarget,
+																		   EAttachmentRule::SnapToTarget, true));
+	}
 
 	MARK_PROPERTY_DIRTY_FROM_NAME(ABuilding, Slot, CurrentBuilding);
 	MARK_PROPERTY_DIRTY_FROM_NAME(UBuildSlotComponent, CurrentBuilding, this);

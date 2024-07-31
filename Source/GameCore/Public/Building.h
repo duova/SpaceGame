@@ -32,6 +32,8 @@ struct FTierInfo
 
 	UPROPERTY(EditAnywhere)
 	TArray<FItemDescriptor> Cost;
+
+	FTierInfo();
 };
 
 UCLASS(Abstract, Blueprintable)
@@ -47,6 +49,9 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	FText DisplayName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UTexture2D* Icon;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FTierInfo> Tiers;
@@ -73,7 +78,10 @@ protected:
 	//Synced by reliable upgrade RPC.
 	int32 Tier;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
+	USceneComponent* SceneComponent;
+	
+	UPROPERTY(EditAnywhere)
 	USkeletalMeshComponent* Skm;
 
 	bool bAwaitingUpgradeAnimation = false;

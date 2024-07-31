@@ -18,8 +18,12 @@ struct GAMECORE_API FItemDescriptor
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<UItem> ItemClass;
 
-	UPROPERTY(EditAnywhere, meta = (ClampMin = 0), BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, meta = (ClampMin = 1), BlueprintReadOnly)
 	int32 ItemCount;
+
+	FItemDescriptor();
+
+	FItemDescriptor(const TSubclassOf<UItem>& InItemClass, int32 InItemCount);
 };
 
 USTRUCT(BlueprintType)
@@ -52,6 +56,8 @@ struct FRecipe
 	bool bUnlocked;
 
 	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess);
+
+	FRecipe();
 };
 
 template <>

@@ -12,6 +12,16 @@ AGamePlayerController::AGamePlayerController()
 	InputPayload = CreateDefaultSubobject<UInputPayload>("InputPayload");
 }
 
+void AGamePlayerController::ServerDropDraggedItem_Implementation(UItem* Dropped, UItem* Current)
+{
+	Dropped->OwningInvComp->DropDraggedItem(Dropped, Current);
+}
+
+void AGamePlayerController::ServerSplitItem_Implementation(UItem* Item)
+{
+	Item->OwningInvComp->SplitItem(Item);
+}
+
 void AGamePlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();

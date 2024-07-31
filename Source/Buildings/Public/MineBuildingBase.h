@@ -6,7 +6,7 @@
 #include "ItemBuildingBase.h"
 #include "MineBuildingBase.generated.h"
 
-UCLASS()
+UCLASS(Abstract)
 class BUILDINGS_API AMineBuildingBase : public AItemBuildingBase
 {
 	GENERATED_BODY()

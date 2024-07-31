@@ -36,7 +36,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<ABuilding> DefaultBuilding;
 
-	bool bEnabled;
+	bool bEnabled = true;
 
 public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,

@@ -11,14 +11,18 @@ AGamePawn::AGamePawn()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	InventoryComp = CreateDefaultSubobject<UInventoryComponent>("InventoryComponent");
-	SetReplicates(true);
+	Asc = CreateDefaultSubobject<UGameAsc>("AbilitySystemComponent");
+	bReplicates = true;
 	APawn::SetReplicateMovement(true);
 }
 
 void AGamePawn::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	if (!GetOwner()->HasAuthority())
+	{
+		GetAbilitySystemComponent()->InitAbilityActorInfo(this, this);
+	}
 }
 
 void AGamePawn::Tick(float DeltaTime)
@@ -44,24 +48,6 @@ UInventoryComponent* AGamePawn::GetInventoryComponent() const
 void AGamePawn::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
-
-	if (AGamePlayerState* Ps = GetPlayerState<AGamePlayerState>())
-	{
-		//Set the Asc on the Server. Clients do this in OnRep_PlayerState().
-		Asc = Cast<UGameAsc>(Ps->GetAbilitySystemComponent());
-		Ps->GetAbilitySystemComponent()->InitAbilityActorInfo(Ps, this);
-	}
-}
-
-void AGamePawn::OnRep_PlayerState()
-{
-	Super::OnRep_PlayerState();
-
-	if (AGamePlayerState* Ps = GetPlayerState<AGamePlayerState>())
-	{
-		// Set the Asc for clients. Server does this in PossessedBy.
-		Asc = Cast<UGameAsc>(Ps->GetAbilitySystemComponent());
-		Asc->InitAbilityActorInfo(Ps, this);
-	}
+	GetAbilitySystemComponent()->InitAbilityActorInfo(this, this);
 }
 

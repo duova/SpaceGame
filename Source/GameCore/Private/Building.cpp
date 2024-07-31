@@ -9,10 +9,16 @@
 #include "Net/UnrealNetwork.h"
 
 
+FTierInfo::FTierInfo(): SkeletalMesh(nullptr), IdleAnimation(nullptr), UpgradeAnimation(nullptr)
+{
+}
+
 ABuilding::ABuilding()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	SetReplicates(true);
+	bReplicates = true;
+	SceneComponent = CreateDefaultSubobject<USceneComponent>("SceneComponent");
+	SetRootComponent(SceneComponent);
 	Skm = CreateDefaultSubobject<USkeletalMeshComponent>("SkeletalMeshComponent");
 }
 
@@ -24,14 +30,14 @@ int32 ABuilding::GetTier() const
 bool ABuilding::PurchaseUpgrade(UInventoryComponent* Source)
 {
 	if (!HasAuthority()) return false;
-	
+
 	const int32 UpgradeTier = Tier + 1;
 	if (UpgradeTier >= Tiers.Num()) return false;
 
 	if (!Source->RemoveItemsBatched(Tiers[UpgradeTier].Cost)) return false;
 
 	ChangeTier(UpgradeTier);
-	
+
 	return true;
 }
 
@@ -48,10 +54,13 @@ void ABuilding::MulticastChangeTier_Implementation(const int32 NewTier)
 	Tier = NewTier;
 	if (GetNetMode() == NM_DedicatedServer) return;
 	DisplayName = Tiers[Tier].TierDisplayName;
-	if (Skm && Skm->GetAnimInstance())
+	if (Skm && Skm->GetAnimInstance() && Skm->GetSkeletalMeshAsset())
 	{
 		Skm->SetSkinnedAssetAndUpdate(Tiers[Tier].SkeletalMesh);
-		Skm->GetAnimInstance()->Montage_Play(Tiers[Tier].UpgradeAnimation);
+		if (Tiers[Tier].UpgradeAnimation != nullptr)
+		{
+			Skm->GetAnimInstance()->Montage_Play(Tiers[Tier].UpgradeAnimation);
+		}
 		bAwaitingUpgradeAnimation = true;
 	}
 	OnChangeTier();

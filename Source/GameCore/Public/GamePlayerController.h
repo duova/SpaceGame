@@ -37,6 +37,12 @@ public:
 	UPROPERTY(EditAnywhere)
 	TArray<UInputAction*> InventoryInputs;
 
+	UFUNCTION(BlueprintCallable, Server, Unreliable)
+	void ServerDropDraggedItem(UItem* Dropped, UItem* Current);
+
+	UFUNCTION(BlueprintCallable, Server, Unreliable)
+	void ServerSplitItem(UItem* Item);
+
 protected:
 	virtual void SetupInputComponent() override;
 	

@@ -8,7 +8,7 @@
 
 class UInventoryComponent;
 
-UCLASS()
+UCLASS(Abstract)
 class BUILDINGS_API AWarehouseBuildingBase : public ABuilding
 {
 	GENERATED_BODY()
@@ -32,7 +32,7 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	void SetFilter(const TSubclassOf<UItem> Item);
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, EditAnywhere)
 	UInventoryComponent* InventoryComponent;
 
 	//NOTE: This breaks if downgraded, another impl has to be written if that's the case.

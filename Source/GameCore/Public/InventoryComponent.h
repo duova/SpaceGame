@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "InputAction.h"
+#include "Item.h"
 #include "Abilities/GameplayAbilityTypes.h"
 #include "Components/ActorComponent.h"
 #include "InventoryComponent.generated.h"
@@ -27,8 +28,8 @@ struct FInventory
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TArray<UItem*> Items;
 
-	UPROPERTY(EditAnywhere, meta = (ClampMin = 0), BlueprintReadOnly)
-	int32 Capacity;
+	UPROPERTY(EditAnywhere, meta = (ClampMin = 1), BlueprintReadOnly)
+	int32 Capacity = 1;
 
 	//Input bindings for the item slots of this inventory.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
@@ -36,14 +37,17 @@ struct FInventory
 
 	//True to bind inputs to active abilities.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	bool bBindInputs;
+	bool bBindInputs = false;
 
 	//True to allow passive and active abilities to work.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	bool bCanUseAbilities;
+	bool bCanUseAbilities = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<UItem> EmptyItemClass;
+
+	UPROPERTY(EditAnywhere)
+	TArray<FItemDescriptor> StartingItems;
 
 	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess);
 };
@@ -80,7 +84,7 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	void SetItemOwnerNotChecked(FGameplayTag InventoryIdentifier, int32 Index, FInventory& Inventory);
+	static void SetItemOwnerNotChecked(FGameplayTag InventoryIdentifier, int32 Index, FInventory& Inventory, UInventoryComponent* InvComp);
 
 	//Index from GetItems. Returns null if type doesn't exist, index is outside of inventory capacity, or if slot is filled.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
@@ -103,6 +107,14 @@ public:
 	bool MoveOrSwapItem(UInventoryComponent* OtherInventoryComponent, const FGameplayTag OtherInventoryIdentifier,
 	                    const int32 OtherItemIndex, const FGameplayTag LocalInventoryIdentifier,
 	                    const int32 LocalItemIndex, const bool bStackIfPossible = true);
+
+	//Drop a dragged item on another item, other item could be empty.
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+	void DropDraggedItem(UItem* Dropped, UItem* Current);
+
+	//Split a stack in half.
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+	void SplitItem(UItem* Item);
 
 	//Attempts to move an item within this UInventoryComponent (LOCAL) to anywhere in another inventory (OTHER).
 	//Returns false if the index, inventories, or the inventory component are invalid, or if there's no space.
@@ -133,6 +145,9 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnItemUpdate OnItemUpdate;
 
+	UFUNCTION(BlueprintPure)
+	TArray<FInventory> GetInventories();
+
 	FInventory* GetInventory(const FGameplayTag InventoryIdentifier);
 
 	void OnInput(const UInputAction* Input, const UInputPayload* InputData, FGameplayTag UItem::* EventTag);
@@ -148,16 +163,16 @@ public:
 	
 	static TMap<const TSubclassOf<UItem>, int32> GetJoinedRequirements(const TArray<FItemDescriptor>& Items);
 
+	UFUNCTION(BlueprintCallable)
+	void InternalOnItemUpdate() const;
+
 protected:
 	bool RegisterAbilities(UItem* Item, const FInventory& Inventory);
 
 	bool UnregisterAbilities(UItem* Item);
 
 private:
-	void InternalMoveOrSwapItems(const UInventoryComponent* OtherInventoryComponent, int32 OtherItemIndex,
+	void InternalMoveOrSwapItems(UInventoryComponent* OtherInventoryComponent, int32 OtherItemIndex,
 	                             int32 LocalItemIndex,
 	                             UItem* Other, FInventory* OtherInventory, UItem* Local, FInventory* LocalInventory);
-
-	UFUNCTION()
-	void InternalOnItemUpdate() const;
 };

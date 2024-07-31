@@ -6,7 +6,7 @@
 #include "InventoryComponent.h"
 #include "Net/UnrealNetwork.h"
 
-UItem::UItem(): Count(0), MaxStackSize(0)
+UItem::UItem(): Icon(nullptr), OwningInvComp(nullptr), OwningInvIndex(0)
 {
 }
 
