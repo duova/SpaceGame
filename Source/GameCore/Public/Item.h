@@ -32,7 +32,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	UTexture2D* Icon;
 
-	UPROPERTY(Replicated, BlueprintReadOnly)
+	UPROPERTY(Replicated, BlueprintReadOnly, ReplicatedUsing = OnRep_Count)
 	int32 Count = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
@@ -55,8 +55,14 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Replicated)
 	int32 OwningInvIndex;
+
+	UPROPERTY(EditAnywhere)
+	bool bDoNotRegister = false;
 	
 protected:
 	UPROPERTY(EditAnywhere, meta = (ClampMin = 1), BlueprintReadOnly)
 	int32 MaxStackSize = 1;
+
+	UFUNCTION()
+	void OnRep_Count() const;
 };

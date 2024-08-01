@@ -33,3 +33,8 @@ int32 UItem::GetMaxStackSize() const
 {
 	return MaxStackSize;
 }
+
+void UItem::OnRep_Count() const
+{
+	OwningInvComp->InternalOnItemUpdate();
+}

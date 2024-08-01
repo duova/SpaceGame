@@ -4,6 +4,7 @@
 #include "GamePlayerController.h"
 
 #include "AbilitySystemComponent.h"
+#include "Building.h"
 #include "EnhancedInputComponent.h"
 #include "GameCharacter.h"
 
@@ -14,12 +15,33 @@ AGamePlayerController::AGamePlayerController()
 
 void AGamePlayerController::ServerDropDraggedItem_Implementation(UItem* Dropped, UItem* Current)
 {
+	if (!Dropped) return;
+	if (!Current) return;
+	if (!Dropped->OwningInvComp) return;
 	Dropped->OwningInvComp->DropDraggedItem(Dropped, Current);
 }
 
 void AGamePlayerController::ServerSplitItem_Implementation(UItem* Item)
 {
+	if (!Item) return;
+	if (!Item->OwningInvComp) return;
 	Item->OwningInvComp->SplitItem(Item);
+}
+
+EUpgradeBuildingResult AGamePlayerController::TryUpgradeBuilding(ABuilding* Building, UInventoryComponent* InvComp)
+{
+	const int32 UpgradeTier = Building->GetTier() + 1;
+	if (UpgradeTier >= Building->Tiers.Num()) return AlreadyMaxLevel;
+	if (!InvComp->HasItems(Building->Tiers[UpgradeTier].Cost)) return MissingItems;
+	ServerUpgradeBuilding(Building, InvComp);
+	return Success;
+}
+
+void AGamePlayerController::ServerUpgradeBuilding_Implementation(ABuilding* Building, UInventoryComponent* InvComp)
+{
+	if (!Building) return;
+	if (!InvComp) return;
+	Building->PurchaseUpgrade(InvComp);
 }
 
 void AGamePlayerController::SetupInputComponent()

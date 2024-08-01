@@ -7,6 +7,8 @@
 #include "GameFramework/Actor.h"
 #include "Building.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnUpdateTier);
+
 class UInventoryComponent;
 class UItem;
 struct FItemDescriptor;
@@ -70,6 +72,8 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	
+	void UpdateCostDisplayInventory();
 
 	virtual void OnChangeTier();
 	
@@ -85,6 +89,7 @@ protected:
 	USkeletalMeshComponent* Skm;
 
 	bool bAwaitingUpgradeAnimation = false;
+	
 public:
 	virtual void Tick(float DeltaTime) override;
 
@@ -94,6 +99,11 @@ public:
 	ABuilding* UpgradeLockedBy = nullptr;
 
 	UFUNCTION(BlueprintPure)
-	bool CanUpgrade() const;
+	bool IsMaxTier() const;
 
+	UPROPERTY(EditAnywhere)
+	FGameplayTag CostDisplayInventory;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnUpdateTier OnUpdateTier;
 };

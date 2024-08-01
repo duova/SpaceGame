@@ -38,6 +38,7 @@ void AWarehouseBuildingBase::OnChangeTier()
 {
 	Super::OnChangeTier();
 
+	if (!HasAuthority()) return;
 	if (InventoryComponent->Inventories.Num() < 1) return;
 	if (CapacityIncreasePerTier.Num() <= Tier) return;
 	InventoryComponent->IncreaseCapacity(InventoryComponent->Inventories[0].InventoryIdentifier, CapacityIncreasePerTier[Tier]);

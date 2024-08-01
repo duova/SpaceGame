@@ -35,7 +35,7 @@ bool ABuilding::PurchaseUpgrade(UInventoryComponent* Source)
 	if (UpgradeTier >= Tiers.Num()) return false;
 
 	if (!Source->RemoveItemsBatched(Tiers[UpgradeTier].Cost)) return false;
-
+	
 	ChangeTier(UpgradeTier);
 
 	return true;
@@ -45,14 +45,19 @@ bool ABuilding::ChangeTier(const int32 NewTier)
 {
 	if (!HasAuthority()) return false;
 	if (NewTier >= Tiers.Num() || NewTier < 0) return false;
-	MulticastChangeTier(Tier);
+	MulticastChangeTier(NewTier);
 	return true;
 }
 
 void ABuilding::MulticastChangeTier_Implementation(const int32 NewTier)
 {
+	if (NewTier >= Tiers.Num() || NewTier < 0) return;
 	Tier = NewTier;
-	if (GetNetMode() == NM_DedicatedServer) return;
+	if (GetNetMode() == NM_DedicatedServer)
+	{
+		OnChangeTier();
+		return;
+	}
 	DisplayName = Tiers[Tier].TierDisplayName;
 	if (Skm && Skm->GetAnimInstance() && Skm->GetSkeletalMeshAsset())
 	{
@@ -69,12 +74,41 @@ void ABuilding::MulticastChangeTier_Implementation(const int32 NewTier)
 void ABuilding::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	MulticastChangeTier_Implementation(0);
+}
 
-	ChangeTier(0);
+void ABuilding::UpdateCostDisplayInventory()
+{
+	if (!HasAuthority()) return;
+	if (!CostDisplayInventory.IsValid()) return;
+	UInventoryComponent* InvComp = GetComponentByClass<UInventoryComponent>();
+	if (!InvComp) return;
+	const FInventory* Inv = InvComp->GetInventory(CostDisplayInventory);
+	if (!Inv) return;
+	const int32 UpgradeTier = Tier + 1;
+	if (UpgradeTier >= Tiers.Num())
+	{
+		InvComp->RemoveAll(CostDisplayInventory);
+	}
+	else
+	{
+		InvComp->RemoveAll(CostDisplayInventory);
+		for (const FItemDescriptor& Item : Tiers[UpgradeTier].Cost)
+		{
+			InvComp->AddItemAnySlot(CostDisplayInventory, Item.ItemClass, Item.ItemCount);
+		}
+	}
 }
 
 void ABuilding::OnChangeTier()
 {
+	UpdateCostDisplayInventory();
+
+	if (OnUpdateTier.IsBound())
+	{
+		OnUpdateTier.Broadcast();
+	}
 }
 
 void ABuilding::HandleAwaitingUpgradeAnimationOnTick()
@@ -105,7 +139,7 @@ void ABuilding::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	DOREPLIFETIME_WITH_PARAMS_FAST(ABuilding, UpgradeLockedBy, RepParams);
 }
 
-bool ABuilding::CanUpgrade() const
+bool ABuilding::IsMaxTier() const
 {
-	return Tier < Tiers.Num() - 1;
+	return Tier >= Tiers.Num() - 1;
 }

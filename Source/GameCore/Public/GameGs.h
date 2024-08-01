@@ -78,6 +78,9 @@ class GAMECORE_API AGameGs : public AGameState
 	GENERATED_BODY()
 
 	AGameGs();
+	void RegisterItemClasses();
+
+	virtual void BeginPlay() override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -92,4 +95,10 @@ public:
 	
 	UFUNCTION()
 	void OnRep_Recipes() const;
+
+	UPROPERTY(EditAnywhere)
+	FString ItemSearchPath;
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<TSubclassOf<UItem>> ItemRegistry;
 };

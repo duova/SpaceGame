@@ -206,10 +206,15 @@ bool UInventoryComponent::RemoveItem(const FGameplayTag InventoryIdentifier, con
 			if (Index >= Inventory.Capacity) return false;
 			if (Index >= Inventory.Items.Num()) return false;
 			if (Inventory.Items[Index]->GetClass() == Inventory.EmptyItemClass) return false;
-			if (Count >= 0 && Count < Inventory.Items[Index]->Count)
+			if (Count > 0 && Count < Inventory.Items[Index]->Count)
 			{
 				Inventory.Items[Index]->Count -= Count;
 				MARK_PROPERTY_DIRTY_FROM_NAME(UItem, Count, Inventory.Items[Index]);
+				if (GetOwner()->HasAuthority())
+				{
+					InternalOnItemUpdate();
+					//Client side called OnRep.
+				}
 				return true;
 			}
 			UnregisterAbilities(Inventory.Items[Index]);
@@ -231,6 +236,26 @@ bool UInventoryComponent::RemoveItem(const FGameplayTag InventoryIdentifier, con
 	}
 
 	return false;
+}
+
+bool UInventoryComponent::RemoveAll(const FGameplayTag InventoryIdentifier)
+{
+	FInventory* Inv = GetInventory(InventoryIdentifier);
+	if (!Inv) return false;
+	for (uint16 i = 0; i < Inv->Items.Num(); i++)
+	{
+		RemoveItem(InventoryIdentifier, i);
+	}
+	return true;
+}
+
+int32 UInventoryComponent::GetInventoryIndexByIdentifier(const FGameplayTag InventoryIdentifier)
+{
+	for (uint16 i = 0; i < Inventories.Num(); i++)
+	{
+		if (Inventories[i].InventoryIdentifier == InventoryIdentifier) return i;
+	}
+	return -1;
 }
 
 TMap<const TSubclassOf<UItem>, int32> UInventoryComponent::GetJoinedRequirements(const TArray<FItemDescriptor>& Items)
@@ -484,31 +509,45 @@ bool UInventoryComponent::MoveItemAnySlot(UInventoryComponent* OtherInventoryCom
 
 bool UInventoryComponent::RemoveItemsBatched(const TArray<FItemDescriptor>& Items)
 {
-	TMap<const TSubclassOf<UItem>, int32> JoinedItemRequirements = GetJoinedRequirements(Items);
-	TMap<const TSubclassOf<UItem>, int32> JoinedItemRequirementsCopy = JoinedItemRequirements;
-	for (const UItem* Item : GetItemsInAllInventories())
-	{
-		if (!JoinedItemRequirementsCopy.Contains(Item->GetClass())) continue;
-		JoinedItemRequirementsCopy[Item->GetClass()] -= Item->Count;
-	}
-	for (const TPair<const TSubclassOf<UItem>, int32>& Pair : JoinedItemRequirementsCopy)
-	{
-		if (Pair.Value > 0) return false;
-	}
+	TMap<const TSubclassOf<UItem>, int32> ItemReq;
+	if (!InternalHasItems(Items, ItemReq)) return false;
 
 	for (FInventory& Inventory : Inventories)
 	{
 		for (uint16 i = 0; i < Inventory.Items.Num(); i++)
 		{
 			const UItem* Item = Inventory.Items[i];
-			if (!JoinedItemRequirements.Contains(Item->GetClass())) continue;
-			const int32 TransferCount = FMath::Min(Item->Count, JoinedItemRequirements[Item->GetClass()]);
+			if (!ItemReq.Contains(Item->GetClass())) continue;
+			const int32 TransferCount = FMath::Min(Item->Count, ItemReq[Item->GetClass()]);
+			if (TransferCount <= 0) continue;
 			RemoveItem(Inventory.InventoryIdentifier, i, TransferCount);
-			JoinedItemRequirements[Item->GetClass()] -= TransferCount;
+			ItemReq[Item->GetClass()] -= TransferCount;
 		}
 	}
 
 	return true;
+}
+
+bool UInventoryComponent::InternalHasItems(const TArray<FItemDescriptor>& Items, TMap<const TSubclassOf<UItem>, int32>& OutJoinedItemRequirements) const
+{
+	TMap<const TSubclassOf<UItem>, int32> JoinedItemRequirements = GetJoinedRequirements(Items);
+	OutJoinedItemRequirements = JoinedItemRequirements;
+	for (const UItem* Item : GetItemsInAllInventories())
+	{
+		if (!JoinedItemRequirements.Contains(Item->GetClass())) continue;
+		JoinedItemRequirements[Item->GetClass()] -= Item->Count;
+	}
+	for (const TPair<const TSubclassOf<UItem>, int32>& Pair : JoinedItemRequirements)
+	{
+		if (Pair.Value > 0) return false;
+	}
+	return true;
+}
+
+bool UInventoryComponent::HasItems(const TArray<FItemDescriptor>& Items) const
+{
+	TMap<const TSubclassOf<UItem>, int32> ItemReq;
+	return InternalHasItems(Items, ItemReq);
 }
 
 TArray<UItem*> UInventoryComponent::GetItems(const FGameplayTag InventoryIdentifier) const
@@ -557,14 +596,14 @@ bool UInventoryComponent::IncreaseCapacity(const FGameplayTag InventoryIdentifie
 		MARK_PROPERTY_DIRTY_FROM_NAME(UItem, Count, Inventory->Items[Index]);
 		RegisterAbilities(Inventory->Items[Index], *Inventory);
 		MARK_PROPERTY_DIRTY_FROM_NAME(UItem, OrderedAbilityHandles, Inventory->Items[Index]);
-		Inventory->Items[Index]->OwningInvComp = this;
-		MARK_PROPERTY_DIRTY_FROM_NAME(UItem, OwningInvComp, Inventory->Items[Index]);
-		Inventory->Items[Index]->OwningInvIdentifier = Inventory->InventoryIdentifier;
-		MARK_PROPERTY_DIRTY_FROM_NAME(UItem, OwningInvIdentifier, Inventory->Items[Index]);
-		Inventory->Items[Index]->OwningInvIndex = Index;
-		MARK_PROPERTY_DIRTY_FROM_NAME(UItem, OwningInvIndex, Inventory->Items[Index]);
+		SetItemOwnerNotChecked(Inventory->InventoryIdentifier, Index, *Inventory, this);
 	}
 	MARK_PROPERTY_DIRTY_FROM_NAME(UInventoryComponent, Inventories, this);
+	if (GetOwner()->HasAuthority())
+	{
+		InternalOnItemUpdate();
+		//Client side called OnRep.
+	}
 	return true;
 }
 

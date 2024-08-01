@@ -100,6 +100,12 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	bool RemoveItem(const FGameplayTag InventoryIdentifier, const int32 Index, const int32 Count = 0);
 
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+	bool RemoveAll(const FGameplayTag InventoryIdentifier);
+
+	UFUNCTION(BlueprintPure)
+	int32 GetInventoryIndexByIdentifier(const FGameplayTag InventoryIdentifier);
+
 	//Attempts to move an item within this UInventoryComponent (LOCAL) to a specified index of any inventory (OTHER).
 	//Swaps instead if an item already exists there. Optionally stacks LOCAL on OTHER if they're the same class.
 	//Index from GetItems. Returns false if the index, inventories, or the inventory component are invalid.
@@ -127,6 +133,11 @@ public:
 	//Removes requested items, only if they are all available.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	bool RemoveItemsBatched(const TArray<FItemDescriptor>& Items);
+
+	bool InternalHasItems(const TArray<FItemDescriptor>& Items, TMap<const TSubclassOf<UItem>, int32>& OutJoinedItemRequirements) const;
+	
+	UFUNCTION(BlueprintPure)
+	bool HasItems(const TArray<FItemDescriptor>& Items) const;
 
 	//Returns the inventory as an array of items including the items representing empty slots. Empty if not found.
 	UFUNCTION(BlueprintPure)

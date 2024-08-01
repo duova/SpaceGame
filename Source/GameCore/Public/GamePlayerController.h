@@ -8,8 +8,18 @@
 #include "GameFramework/PlayerController.h"
 #include "GamePlayerController.generated.h"
 
+class UInventoryComponent;
+class ABuilding;
 class UItem;
 class AGameCharacter;
+
+UENUM(BlueprintType)
+enum EUpgradeBuildingResult : uint8
+{
+	Success,
+	MissingItems,
+	AlreadyMaxLevel
+};
 
 UCLASS()
 class UInputPayload : public UObject
@@ -42,6 +52,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Server, Unreliable)
 	void ServerSplitItem(UItem* Item);
+
+	UFUNCTION(BlueprintCallable)
+	EUpgradeBuildingResult TryUpgradeBuilding(ABuilding* Building, UInventoryComponent* InvComp);
+
+	UFUNCTION(Server, Unreliable)
+	void ServerUpgradeBuilding(ABuilding* Building, UInventoryComponent* InvComp);
 
 protected:
 	virtual void SetupInputComponent() override;
