@@ -4,11 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
+#include "NiagaraSystem.h"
 #include "GameFramework/Actor.h"
 #include "Building.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnUpdateTier);
+DECLARE_MULTICAST_DELEGATE(FStaticOnUpdateTier);
 
+class UNiagaraComponent;
 class UInventoryComponent;
 class UItem;
 struct FItemDescriptor;
@@ -23,16 +26,9 @@ struct FTierInfo
 	FText TierDisplayName;
 
 	UPROPERTY(EditAnywhere)
-	USkeletalMesh* SkeletalMesh;
+	UStaticMesh* StaticMesh;
 
-	UPROPERTY(EditAnywhere)
-	UAnimMontage* IdleAnimation;
-
-	//Animation when upgrading to this tier.
-	UPROPERTY(EditAnywhere)
-	UAnimMontage* UpgradeAnimation;
-
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FItemDescriptor> Cost;
 
 	FTierInfo();
@@ -76,8 +72,6 @@ protected:
 	void UpdateCostDisplayInventory();
 
 	virtual void OnChangeTier();
-	
-	void HandleAwaitingUpgradeAnimationOnTick();
 
 	//Synced by reliable upgrade RPC.
 	int32 Tier;
@@ -86,7 +80,7 @@ protected:
 	USceneComponent* SceneComponent;
 	
 	UPROPERTY(EditAnywhere)
-	USkeletalMeshComponent* Skm;
+	UStaticMeshComponent* MeshComponent;
 
 	bool bAwaitingUpgradeAnimation = false;
 	
@@ -94,9 +88,6 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	UPROPERTY(Replicated, BlueprintReadOnly)
-	ABuilding* UpgradeLockedBy = nullptr;
 
 	UFUNCTION(BlueprintPure)
 	bool IsMaxTier() const;
@@ -106,4 +97,6 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnUpdateTier OnUpdateTier;
+
+	FStaticOnUpdateTier InternalOnUpdateTier;
 };

@@ -8,6 +8,7 @@
 #include "GameFramework/PlayerController.h"
 #include "GamePlayerController.generated.h"
 
+class UBuildSlotComponent;
 class UInventoryComponent;
 class ABuilding;
 class UItem;
@@ -18,7 +19,8 @@ enum EUpgradeBuildingResult : uint8
 {
 	Success,
 	MissingItems,
-	AlreadyMaxLevel
+	AlreadyMaxLevel,
+	Null
 };
 
 UCLASS()
@@ -58,6 +60,12 @@ public:
 
 	UFUNCTION(Server, Unreliable)
 	void ServerUpgradeBuilding(ABuilding* Building, UInventoryComponent* InvComp);
+
+	UFUNCTION(BlueprintCallable)
+	bool TryPurchaseBuilding(const TSubclassOf<ABuilding>& BuildingClass, UBuildSlotComponent* Slot, UInventoryComponent* InvComp);
+
+	UFUNCTION(Server, Unreliable)
+	void ServerPurchaseBuilding(TSubclassOf<ABuilding> BuildingClass, UBuildSlotComponent* Slot, UInventoryComponent* InvComp);
 
 protected:
 	virtual void SetupInputComponent() override;

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Components/BillboardComponent.h"
 #include "Components/SceneComponent.h"
 #include "BuildSlotComponent.generated.h"
 
@@ -12,17 +13,17 @@ class UItem;
 class ABuilding;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), Blueprintable)
-class GAMECORE_API UBuildSlotComponent : public USceneComponent
+class GAMECORE_API UBuildSlotComponent : public UBillboardComponent
 {
 	GENERATED_BODY()
 
 public:
 	UBuildSlotComponent();
 
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION()
 	void Enable();
 
-	UFUNCTION(NetMulticast, Reliable)
+	UFUNCTION()
 	void Disable();
 
 	UPROPERTY(Replicated, BlueprintReadOnly)
@@ -36,7 +37,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<ABuilding> DefaultBuilding;
 
-	bool bEnabled = true;
+	bool bEnabled;
+
+	UPROPERTY()
+	UBillboardComponent* Billboard;
 
 public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,

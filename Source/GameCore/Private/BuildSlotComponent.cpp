@@ -5,6 +5,7 @@
 
 #include "Building.h"
 #include "InventoryComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "Net/Core/PushModel/PushModel.h"
 
@@ -14,27 +15,27 @@ UBuildSlotComponent::UBuildSlotComponent(): CurrentBuilding(nullptr)
 	SetIsReplicatedByDefault(true);
 }
 
-void UBuildSlotComponent::Enable_Implementation()
+void UBuildSlotComponent::Enable()
 {
 	bEnabled = true;
-	GetOwner()->SetActorEnableCollision(false);
-	if (GetNetMode() == NM_DedicatedServer) return;
-	GetOwner()->SetActorHiddenInGame(true);
+	ChangeBuilding(DefaultBuilding);
 }
 
-void UBuildSlotComponent::Disable_Implementation()
+void UBuildSlotComponent::Disable()
 {
 	bEnabled = false;
-	GetOwner()->SetActorEnableCollision(true);
-	if (GetNetMode() == NM_DedicatedServer) return;
-	GetOwner()->SetActorHiddenInGame(false);
+	if (CurrentBuilding)
+	{
+		CurrentBuilding->Destroy();
+		MARK_PROPERTY_DIRTY_FROM_NAME(UBuildSlotComponent, CurrentBuilding, this);
+	}
 }
 
 void UBuildSlotComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	ChangeBuilding(DefaultBuilding);
+	Enable();
 }
 
 void UBuildSlotComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -44,6 +45,7 @@ void UBuildSlotComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (CurrentBuilding)
 	{
 		CurrentBuilding->Destroy(true);
+		MARK_PROPERTY_DIRTY_FROM_NAME(UBuildSlotComponent, CurrentBuilding, this);
 	}
 }
 
@@ -74,17 +76,17 @@ bool UBuildSlotComponent::ChangeBuilding(const TSubclassOf<ABuilding>& BuildingC
 		CurrentBuilding->Destroy(true);
 	}
 
-	CurrentBuilding = GetWorld()->SpawnActor<ABuilding>(BuildingClass);
+	CurrentBuilding = GetWorld()->SpawnActorDeferred<ABuilding>(BuildingClass, GetComponentTransform());
+	CurrentBuilding->Slot = this;
+	UGameplayStatics::FinishSpawningActor(CurrentBuilding, GetComponentTransform());
 
 	if (CurrentBuilding)
 	{
-		//CurrentBuilding->SetActorTransform(GetComponentTransform());
-	
 		CurrentBuilding->AttachToComponent(this, FAttachmentTransformRules(EAttachmentRule::SnapToTarget,
 																		   EAttachmentRule::SnapToTarget,
 																		   EAttachmentRule::SnapToTarget, true));
 	}
-
+	
 	MARK_PROPERTY_DIRTY_FROM_NAME(ABuilding, Slot, CurrentBuilding);
 	MARK_PROPERTY_DIRTY_FROM_NAME(UBuildSlotComponent, CurrentBuilding, this);
 

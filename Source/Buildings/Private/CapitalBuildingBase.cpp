@@ -7,36 +7,41 @@
 
 ACapitalBuildingBase::ACapitalBuildingBase()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 }
 
 void ACapitalBuildingBase::BeginPlay()
 {
 	Super::BeginPlay();
-
-	if (!HasAuthority()) return;
-
-	if (!Slot) return;
-
-	TieredBuildSlots.AddDefaulted(Tiers.Num());
-	
-	TArray<UBuildSlotComponent*> Slots;
-	Slot->GetOwner()->GetComponents<UBuildSlotComponent>(Slots);
-
-	for (UBuildSlotComponent* NearbySlot : Slots)
-	{
-		if (NearbySlot == Slot) continue;
-		NearbySlot->Disable();
-		if (NearbySlot->UnlockTier >= TieredBuildSlots.Num()) continue;
-		TieredBuildSlots[NearbySlot->UnlockTier].BuildSlots.Add(NearbySlot);
-	}
-
-	EnableTier(0);
 }
 
 void ACapitalBuildingBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (!bInitialized)
+	{
+		if (!HasAuthority()) return;
+		
+		if (!Slot) return;
+
+		TieredBuildSlots.AddDefaulted(Tiers.Num());
+	
+		TArray<UBuildSlotComponent*> Slots;
+		Slot->GetOwner()->GetComponents<UBuildSlotComponent>(Slots);
+
+		for (UBuildSlotComponent* NearbySlot : Slots)
+		{
+			if (NearbySlot == Slot) continue;
+			NearbySlot->Disable();
+			if (NearbySlot->UnlockTier >= TieredBuildSlots.Num()) continue;
+			TieredBuildSlots[NearbySlot->UnlockTier].BuildSlots.Add(NearbySlot);
+		}
+
+		EnableTier(0);
+
+		bInitialized = true;
+	}
 }
 
 bool ACapitalBuildingBase::EnableTier(const int32 InTier)
@@ -47,5 +52,12 @@ bool ACapitalBuildingBase::EnableTier(const int32 InTier)
 		NearbySlot->Enable();
 	}
 	return true;
+}
+
+void ACapitalBuildingBase::OnChangeTier()
+{
+	Super::OnChangeTier();
+
+	EnableTier(Tier);
 }
 

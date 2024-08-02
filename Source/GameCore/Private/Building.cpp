@@ -6,10 +6,11 @@
 #include "GameGs.h"
 #include "InventoryComponent.h"
 #include "Item.h"
+#include "../../../../../../../../Program Files/Epic Games/UE_5.4/Engine/Plugins/FX/Niagara/Source/Niagara/Public/NiagaraComponent.h"
 #include "Net/UnrealNetwork.h"
 
 
-FTierInfo::FTierInfo(): SkeletalMesh(nullptr), IdleAnimation(nullptr), UpgradeAnimation(nullptr)
+FTierInfo::FTierInfo(): StaticMesh(nullptr)
 {
 }
 
@@ -19,7 +20,8 @@ ABuilding::ABuilding()
 	bReplicates = true;
 	SceneComponent = CreateDefaultSubobject<USceneComponent>("SceneComponent");
 	SetRootComponent(SceneComponent);
-	Skm = CreateDefaultSubobject<USkeletalMeshComponent>("SkeletalMeshComponent");
+	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>("MeshComponent");
+	MeshComponent->SetupAttachment(RootComponent);
 }
 
 int32 ABuilding::GetTier() const
@@ -59,14 +61,9 @@ void ABuilding::MulticastChangeTier_Implementation(const int32 NewTier)
 		return;
 	}
 	DisplayName = Tiers[Tier].TierDisplayName;
-	if (Skm && Skm->GetAnimInstance() && Skm->GetSkeletalMeshAsset())
+	if (Tiers[Tier].StaticMesh)
 	{
-		Skm->SetSkinnedAssetAndUpdate(Tiers[Tier].SkeletalMesh);
-		if (Tiers[Tier].UpgradeAnimation != nullptr)
-		{
-			Skm->GetAnimInstance()->Montage_Play(Tiers[Tier].UpgradeAnimation);
-		}
-		bAwaitingUpgradeAnimation = true;
+		MeshComponent->SetStaticMesh(Tiers[Tier].StaticMesh);
 	}
 	OnChangeTier();
 }
@@ -105,27 +102,20 @@ void ABuilding::OnChangeTier()
 {
 	UpdateCostDisplayInventory();
 
+	if (InternalOnUpdateTier.IsBound())
+	{
+		InternalOnUpdateTier.Broadcast();
+	}
+
 	if (OnUpdateTier.IsBound())
 	{
 		OnUpdateTier.Broadcast();
 	}
 }
 
-void ABuilding::HandleAwaitingUpgradeAnimationOnTick()
-{
-	if (GetNetMode() == NM_DedicatedServer) return;
-	if (!bAwaitingUpgradeAnimation || !Skm) return;
-	UAnimInstance* Instance = Skm->GetAnimInstance();
-	if (!Instance || Instance->Montage_IsActive(Tiers[Tier].UpgradeAnimation)) return;
-	bAwaitingUpgradeAnimation = false;
-	Instance->Montage_Play(Tiers[Tier].IdleAnimation);
-}
-
 void ABuilding::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	HandleAwaitingUpgradeAnimationOnTick();
 }
 
 void ABuilding::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -136,7 +126,6 @@ void ABuilding::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	RepParams.bIsPushBased = true;
 
 	DOREPLIFETIME_WITH_PARAMS_FAST(ABuilding, Slot, RepParams);
-	DOREPLIFETIME_WITH_PARAMS_FAST(ABuilding, UpgradeLockedBy, RepParams);
 }
 
 bool ABuilding::IsMaxTier() const

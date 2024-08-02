@@ -14,7 +14,8 @@ public class GameCore : ModuleRules
                 "GameplayTasks",
                 "GameplayTags",
                 "NetCore",
-                "EnhancedInput",
+                "EnhancedInput", 
+                "Niagara",
             }
         );
 

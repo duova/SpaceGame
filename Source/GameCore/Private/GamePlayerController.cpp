@@ -5,6 +5,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "Building.h"
+#include "BuildSlotComponent.h"
 #include "EnhancedInputComponent.h"
 #include "GameCharacter.h"
 
@@ -30,11 +31,31 @@ void AGamePlayerController::ServerSplitItem_Implementation(UItem* Item)
 
 EUpgradeBuildingResult AGamePlayerController::TryUpgradeBuilding(ABuilding* Building, UInventoryComponent* InvComp)
 {
+	if (!Building) return Null;
+	if (!InvComp) return Null;
 	const int32 UpgradeTier = Building->GetTier() + 1;
 	if (UpgradeTier >= Building->Tiers.Num()) return AlreadyMaxLevel;
 	if (!InvComp->HasItems(Building->Tiers[UpgradeTier].Cost)) return MissingItems;
 	ServerUpgradeBuilding(Building, InvComp);
 	return Success;
+}
+
+bool AGamePlayerController::TryPurchaseBuilding(const TSubclassOf<ABuilding>& BuildingClass, UBuildSlotComponent* Slot,
+	UInventoryComponent* InvComp)
+{
+	if (!BuildingClass.Get()) return false;
+	if (!Slot) return false;
+	if (!InvComp) return false;
+	if (BuildingClass.GetDefaultObject()->Tiers.Num() <= 0) return false;
+	if (!InvComp->HasItems(BuildingClass.GetDefaultObject()->Tiers[0].Cost)) return false;
+	ServerPurchaseBuilding(BuildingClass, Slot, InvComp);
+	return true;
+}
+
+void AGamePlayerController::ServerPurchaseBuilding_Implementation(TSubclassOf<ABuilding> BuildingClass,
+                                                                  UBuildSlotComponent* Slot, UInventoryComponent* InvComp)
+{
+	Slot->PurchaseBuilding(BuildingClass, InvComp);
 }
 
 void AGamePlayerController::ServerUpgradeBuilding_Implementation(ABuilding* Building, UInventoryComponent* InvComp)

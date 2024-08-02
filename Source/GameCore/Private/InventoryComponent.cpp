@@ -546,6 +546,7 @@ bool UInventoryComponent::InternalHasItems(const TArray<FItemDescriptor>& Items,
 
 bool UInventoryComponent::HasItems(const TArray<FItemDescriptor>& Items) const
 {
+	if (Items.Num() == 0) return true;
 	TMap<const TSubclassOf<UItem>, int32> ItemReq;
 	return InternalHasItems(Items, ItemReq);
 }

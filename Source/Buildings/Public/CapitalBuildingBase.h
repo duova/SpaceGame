@@ -32,6 +32,10 @@ protected:
 	TArray<FBuildSlotGroup> TieredBuildSlots;
 
 	bool EnableTier(int32 InTier);
+
+	virtual void OnChangeTier() override;
+
+	bool bInitialized = false;
 	
 public:
 	virtual void Tick(float DeltaTime) override;
