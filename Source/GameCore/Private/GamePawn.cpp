@@ -19,7 +19,7 @@ AGamePawn::AGamePawn()
 void AGamePawn::BeginPlay()
 {
 	Super::BeginPlay();
-	if (!GetOwner()->HasAuthority())
+	if (!HasAuthority())
 	{
 		GetAbilitySystemComponent()->InitAbilityActorInfo(this, this);
 	}

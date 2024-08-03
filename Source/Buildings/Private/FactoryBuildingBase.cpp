@@ -144,7 +144,7 @@ void AFactoryBuildingBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (!GetOwner()->HasAuthority()) return;
+	if (!HasAuthority()) return;
 	
 	if (CurrentRecipe < 0) return;
 	if (CurrentRecipe >= GameState->Recipes.Num()) return;
@@ -153,7 +153,7 @@ void AFactoryBuildingBase::Tick(float DeltaTime)
 
 	if (Status == EFactoryStatus::Running)
 	{
-		Progress += DeltaTime * TierSpeedMultipliers[SpeedMultiplierTier] / Recipe.RecipeBaseTime;
+		Progress += DeltaTime * TierSpeedMultipliers[SpeedMultiplierTier] / FMath::Max(0.1, Recipe.RecipeBaseTime);
 		MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, Progress, this);
 		OnRep_Progress();
 	}

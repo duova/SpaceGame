@@ -30,7 +30,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
-	bool ResearchRecipe(const int32 RecipeId);
+	bool ResearchRecipe(const int32 RecipeId, UInventoryComponent* InvCom);
 
 	UFUNCTION()
 	void OnRep_EndTimestamp() const;
@@ -56,4 +56,6 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnUpdateLab OnUpdateCurrentRecipe;
+
+	virtual void OnChangeTier() override;
 };

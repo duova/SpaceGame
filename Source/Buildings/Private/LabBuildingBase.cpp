@@ -4,6 +4,7 @@
 #include "LabBuildingBase.h"
 
 #include "GameGs.h"
+#include "InventoryComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Net/Core/PushModel/PushModel.h"
 
@@ -32,16 +33,17 @@ void ALabBuildingBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	DOREPLIFETIME_WITH_PARAMS_FAST(ALabBuildingBase, CurrentRecipe, RepParams);
 }
 
-bool ALabBuildingBase::ResearchRecipe(const int32 RecipeId)
+bool ALabBuildingBase::ResearchRecipe(const int32 RecipeId, UInventoryComponent* InvComp)
 {
-	if (!GetOwner()->HasAuthority()) return false;
+	if (!HasAuthority()) return false;
+	if (CurrentRecipe != INDEX_NONE) return false;
 	if (GameState->Recipes.Num() <= RecipeId) return false;
-	if (!InputItems(GameState->Recipes[RecipeId].Inputs)) return false;
+	if (!InvComp->RemoveItemsBatched(GameState->Recipes[RecipeId].Inputs)) return false;
 	CurrentRecipe = RecipeId;
 	MARK_PROPERTY_DIRTY_FROM_NAME(ALabBuildingBase, CurrentRecipe, this);
 	OnRep_CurrentRecipe();
 	const uint16 SpeedMultiplierTier = FMath::Min(Tier, TierSpeedMultipliers.Num() - 1);
-	EndTimestamp = GameState->Recipes[RecipeId].ResearchBaseTime * TierSpeedMultipliers[SpeedMultiplierTier] + GetWorld()
+	EndTimestamp = (GameState->Recipes[RecipeId].ResearchBaseTime / FMath::Max(0.1, TierSpeedMultipliers[SpeedMultiplierTier])) + GetWorld()
 		->GetTimeSeconds();
 	MARK_PROPERTY_DIRTY_FROM_NAME(ALabBuildingBase, EndTimestamp, this);
 	OnRep_EndTimestamp();
@@ -64,11 +66,28 @@ void ALabBuildingBase::OnRep_CurrentRecipe() const
 	}
 }
 
+void ALabBuildingBase::OnChangeTier()
+{
+	Super::OnChangeTier();
+
+	if (!HasAuthority()) return;
+	if (CurrentRecipe == INDEX_NONE) return;
+	const uint16 LastTier = Tier - 1;
+	if (LastTier > 0) return;
+	const float OriginalResearchTime = GameState->Recipes[CurrentRecipe].ResearchBaseTime / FMath::Max(0.1, TierSpeedMultipliers[LastTier]);
+	const float Progress = 1 - (EndTimestamp - GetWorld()->GetTimeSeconds()) / OriginalResearchTime;
+	const float NewResearchTime = GameState->Recipes[CurrentRecipe].ResearchBaseTime / FMath::Max(0.1, TierSpeedMultipliers[Tier]);
+	const float NewRemainingTime = NewResearchTime * (1 - Progress);
+	EndTimestamp = GetWorld()->GetTimeSeconds() + NewRemainingTime;
+	MARK_PROPERTY_DIRTY_FROM_NAME(ALabBuildingBase, EndTimestamp, this);
+	OnRep_EndTimestamp();
+}
+
 void ALabBuildingBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	if (!GetOwner()->HasAuthority()) return;
+	
+	if (!HasAuthority()) return;
 
 	if (GetWorld()->GetTimeSeconds() > EndTimestamp && CurrentRecipe != INDEX_NONE)
 	{
