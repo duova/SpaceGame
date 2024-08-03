@@ -129,7 +129,7 @@ bool AItemBuildingBase::TryFlush()
 
 	for (UInventoryComponent* InvComp : NearbyInventories)
 	{
-		const TSubclassOf<UItem> Filter = Cast<AWarehouseBuildingBase>(InvComp->GetOwner())->Filter;
+		const TSubclassOf<UItem>& Filter = Cast<AWarehouseBuildingBase>(InvComp->GetOwner())->Filter;
 		
 		TArray<FGameplayTag> InventoryIds;
 
@@ -143,9 +143,9 @@ bool AItemBuildingBase::TryFlush()
 			TArray<UItem*>& Items = Buffer->GetInventory(FGameplayTag())->Items;
 			for (uint16 i = 0; i < Items.Num(); i++)
 			{
-				if (Filter != nullptr && Filter != Items[i]->GetClass()) continue;
+				if (Filter.Get() != nullptr && Filter.Get() != Items[i]->GetClass()) continue;
 				if (Items[i]->GetClass() == UItem::StaticClass()) continue;
-				InvComp->MoveItemAnySlot(InvComp, Id, FGameplayTag(), i);
+				Buffer->MoveItemAnySlot(InvComp, Id, FGameplayTag(), i);
 			}
 		}
 	}

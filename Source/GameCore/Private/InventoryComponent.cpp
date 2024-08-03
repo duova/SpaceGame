@@ -137,15 +137,12 @@ UItem* UInventoryComponent::AddItem(const FGameplayTag InventoryIdentifier, cons
 			RegisterAbilities(Inventory.Items[Index], Inventory);
 			MARK_PROPERTY_DIRTY_FROM_NAME(UItem, OrderedAbilityHandles, Inventory.Items[Index]);
 			SetItemOwnerNotChecked(InventoryIdentifier, Index, Inventory, this);
-			if (GetOwner()->HasAuthority())
-			{
-				InternalOnItemUpdate();
-				//Client side called OnRep.
-			}
+			InternalOnItemUpdate();
+			//Client side called OnRep.
 			return Inventory.Items[Index];
 		}
 	}
-	
+
 	return nullptr;
 }
 
@@ -210,11 +207,8 @@ bool UInventoryComponent::RemoveItem(const FGameplayTag InventoryIdentifier, con
 			{
 				Inventory.Items[Index]->Count -= Count;
 				MARK_PROPERTY_DIRTY_FROM_NAME(UItem, Count, Inventory.Items[Index]);
-				if (GetOwner()->HasAuthority())
-				{
-					InternalOnItemUpdate();
-					//Client side called OnRep.
-				}
+				InternalOnItemUpdate();
+				//Client side called OnRep.
 				return true;
 			}
 			UnregisterAbilities(Inventory.Items[Index]);
@@ -226,11 +220,8 @@ bool UInventoryComponent::RemoveItem(const FGameplayTag InventoryIdentifier, con
 			MARK_PROPERTY_DIRTY_FROM_NAME(UItem, OrderedAbilityHandles, Inventory.Items[Index]);
 			SetItemOwnerNotChecked(InventoryIdentifier, Index, Inventory, this);
 			MARK_PROPERTY_DIRTY_FROM_NAME(UInventoryComponent, Inventories, this);
-			if (GetOwner()->HasAuthority())
-			{
-				InternalOnItemUpdate();
-				//Client side called OnRep.
-			}
+			InternalOnItemUpdate();
+			//Client side called OnRep.
 			return true;
 		}
 	}
@@ -408,28 +399,21 @@ bool UInventoryComponent::MoveOrSwapItem(UInventoryComponent* OtherInventoryComp
 		Other->Count += TransferableCount;
 		MARK_PROPERTY_DIRTY_FROM_NAME(UItem, Count, Other);
 		RemoveItem(LocalInventoryIdentifier, LocalItemIndex, TransferableCount);
-		if (GetOwner()->HasAuthority())
-		{
-			InternalOnItemUpdate();
-			OtherInventoryComponent->InternalOnItemUpdate();
-			//Client side calls OnRep.
-		}
+		InternalOnItemUpdate();
+		OtherInventoryComponent->InternalOnItemUpdate();
+		//Client side calls OnRep.
 		return true;
 	}
-	
+
 	InternalMoveOrSwapItems(OtherInventoryComponent, OtherItemIndex, LocalItemIndex, Other, OtherInventory, Local,
 	                        LocalInventory);
 
 	SetItemOwnerNotChecked(LocalInventoryIdentifier, LocalItemIndex, *LocalInventory, this);
 	SetItemOwnerNotChecked(OtherInventoryIdentifier, OtherItemIndex, *OtherInventory, OtherInventoryComponent);
 
-
-	if (GetOwner()->HasAuthority())
-	{
-		InternalOnItemUpdate();
-		OtherInventoryComponent->InternalOnItemUpdate();
-		//Client side called OnRep.
-	}
+	InternalOnItemUpdate();
+	OtherInventoryComponent->InternalOnItemUpdate();
+	//Client side called OnRep.
 
 	return true;
 }
@@ -483,9 +467,11 @@ bool UInventoryComponent::MoveItemAnySlot(UInventoryComponent* OtherInventoryCom
 			if (Item->GetClass() != LocalItem->GetClass()) continue;
 			const uint16 TransferableCount = FMath::Min(Item->GetMaxStackSize() - Item->Count, LocalItem->Count);
 			Item->Count += TransferableCount;
-			LocalItem -= TransferableCount;
+			LocalItem->Count -= TransferableCount;
 			MARK_PROPERTY_DIRTY_FROM_NAME(UItem, Count, Item);
+			OtherInventoryComponent->InternalOnItemUpdate();
 			MARK_PROPERTY_DIRTY_FROM_NAME(UItem, Count, LocalItem);
+			InternalOnItemUpdate();
 			if (LocalItem->Count <= 0)
 			{
 				RemoveItem(LocalInventoryIdentifier, LocalItemIndex);
@@ -528,7 +514,8 @@ bool UInventoryComponent::RemoveItemsBatched(const TArray<FItemDescriptor>& Item
 	return true;
 }
 
-bool UInventoryComponent::InternalHasItems(const TArray<FItemDescriptor>& Items, TMap<const TSubclassOf<UItem>, int32>& OutJoinedItemRequirements) const
+bool UInventoryComponent::InternalHasItems(const TArray<FItemDescriptor>& Items,
+                                           TMap<const TSubclassOf<UItem>, int32>& OutJoinedItemRequirements) const
 {
 	TMap<const TSubclassOf<UItem>, int32> JoinedItemRequirements = GetJoinedRequirements(Items);
 	OutJoinedItemRequirements = JoinedItemRequirements;
@@ -584,6 +571,7 @@ TArray<UItem*> UInventoryComponent::GetItemsInAllInventories() const
 
 bool UInventoryComponent::IncreaseCapacity(const FGameplayTag InventoryIdentifier, const int32 Count)
 {
+	if (!GetOwner()->HasAuthority()) return false;
 	const int32 ClampedCount = FMath::Max(0, Count);
 	if (ClampedCount == 0) return false;
 	FInventory* Inventory = GetInventory(InventoryIdentifier);
@@ -600,11 +588,8 @@ bool UInventoryComponent::IncreaseCapacity(const FGameplayTag InventoryIdentifie
 		SetItemOwnerNotChecked(Inventory->InventoryIdentifier, Index, *Inventory, this);
 	}
 	MARK_PROPERTY_DIRTY_FROM_NAME(UInventoryComponent, Inventories, this);
-	if (GetOwner()->HasAuthority())
-	{
-		InternalOnItemUpdate();
-		//Client side called OnRep.
-	}
+	InternalOnItemUpdate();
+	//Client side called OnRep.
 	return true;
 }
 

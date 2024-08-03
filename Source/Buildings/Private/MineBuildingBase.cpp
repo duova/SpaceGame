@@ -18,13 +18,13 @@ AMineBuildingBase::AMineBuildingBase(): RatePerMinute(0), UnrealizedResources(0)
 void AMineBuildingBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 void AMineBuildingBase::EvaluateRate()
 {
 	const uint16 SpeedMultiplierTier = FMath::Min(Tier, TierSpeedMultipliers.Num() - 1);
 	RatePerMinute = TierSpeedMultipliers[SpeedMultiplierTier] * Slot->ResourceRatePerMinute;
+	OnRep_RatePerMinute();
 	MARK_PROPERTY_DIRTY_FROM_NAME(AMineBuildingBase, RatePerMinute, this);
 }
 
@@ -66,6 +66,14 @@ void AMineBuildingBase::OnChangeTier()
 {
 	Super::OnChangeTier();
 
-	bRateEvaluated = false;
+	EvaluateRate();
+}
+
+void AMineBuildingBase::OnRep_RatePerMinute() const
+{
+	if (OnUpdateRatePerMinute.IsBound())
+	{
+		OnUpdateRatePerMinute.Broadcast();
+	}
 }
 

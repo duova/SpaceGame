@@ -34,6 +34,10 @@ bool AFactoryBuildingBase::ChangeRecipe(const int32 RecipeId)
 	MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, CurrentRecipe, this);
 	MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, RemainingCount, this);
 	MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, Status, this);
+	OnRep_Progress();
+	OnRep_CurrentRecipe();
+	OnRep_RemainingCount();
+	OnRep_Status();
 
 	return true;
 }
@@ -43,6 +47,7 @@ bool AFactoryBuildingBase::SetCount(const int32 Count)
 	if (!HasAuthority()) return false;
 	RemainingCount = FMath::Max(0, Count);
 	MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, RemainingCount, this);
+	OnRep_RemainingCount();
 	return true;
 }
 
@@ -51,6 +56,7 @@ bool AFactoryBuildingBase::ChangeCount(const int32 Count)
 	if (!HasAuthority()) return false;
 	RemainingCount = FMath::Max(0, Count + RemainingCount);
 	MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, RemainingCount, this);
+	OnRep_RemainingCount();
 	return true;
 }
 
@@ -78,6 +84,7 @@ void AFactoryBuildingBase::RunRecipe()
 {
 	RemainingCount--;
 	MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, RemainingCount, this);
+	OnRep_RemainingCount();
 	Status = EFactoryStatus::Running;
 }
 
@@ -87,15 +94,49 @@ void AFactoryBuildingBase::CheckAndStart(const FRecipe& Recipe)
 	{
 		Status = EFactoryStatus::IdleNoInput;
 		MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, Status, this);
+		OnRep_Status();
 	}
 	else if (IsOutputLocked())
 	{
 		Status = EFactoryStatus::IdleNoOutput;
 		MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, Status, this);
+		OnRep_Status();
 	}
 	else
 	{
 		RunRecipe();
+	}
+}
+
+void AFactoryBuildingBase::OnRep_Progress() const
+{
+	if (OnUpdateProgress.IsBound())
+	{
+		OnUpdateProgress.Broadcast();
+	}
+}
+
+void AFactoryBuildingBase::OnRep_CurrentRecipe() const
+{
+	if (OnUpdateCurrentRecipe.IsBound())
+	{
+		OnUpdateCurrentRecipe.Broadcast();
+	}
+}
+
+void AFactoryBuildingBase::OnRep_RemainingCount() const
+{
+	if (OnUpdateRemainingCount.IsBound())
+	{
+		OnUpdateRemainingCount.Broadcast();
+	}
+}
+
+void AFactoryBuildingBase::OnRep_Status() const
+{
+	if (OnUpdateStatus.IsBound())
+	{
+		OnUpdateStatus.Broadcast();
 	}
 }
 
@@ -114,6 +155,7 @@ void AFactoryBuildingBase::Tick(float DeltaTime)
 	{
 		Progress += DeltaTime * TierSpeedMultipliers[SpeedMultiplierTier] / Recipe.RecipeBaseTime;
 		MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, Progress, this);
+		OnRep_Progress();
 	}
 
 	if (Progress > 1)
@@ -122,6 +164,7 @@ void AFactoryBuildingBase::Tick(float DeltaTime)
 		{
 			Progress -= 1.0;
 			MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, Progress, this);
+			OnRep_Progress();
 			OutputItems(Recipe.Result);
 			CheckAndStart(Recipe);
 		}
@@ -129,8 +172,10 @@ void AFactoryBuildingBase::Tick(float DeltaTime)
 		{
 			Status = EFactoryStatus::IdleNoCount;
 			MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, Status, this);
+			OnRep_Status();
 			Progress = 0;
 			MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, Progress, this);
+			OnRep_Progress();
 			OutputItems(Recipe.Result);
 		}
 	}

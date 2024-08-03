@@ -47,7 +47,7 @@ private:
 	UPROPERTY()
 	TArray<UInventoryComponent*> NearbyInventories;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 	UInventoryComponent* Buffer;
 	
 	bool InternalHasItems(const TMap<const TSubclassOf<UItem>, int32>& JoinedItemRequirements);

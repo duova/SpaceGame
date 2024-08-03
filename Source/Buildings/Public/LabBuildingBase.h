@@ -6,6 +6,8 @@
 #include "ItemBuildingBase.h"
 #include "LabBuildingBase.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnUpdateLab);
+
 class AGameGs;
 
 UCLASS(Abstract)
@@ -30,11 +32,11 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	bool ResearchRecipe(const int32 RecipeId);
 
-	UFUNCTION(BlueprintImplementableEvent)
-	void OnRep_EndTimestamp();
+	UFUNCTION()
+	void OnRep_EndTimestamp() const;
 
-	UFUNCTION(BlueprintImplementableEvent)
-	void OnRep_CurrentRecipe();
+	UFUNCTION()
+	void OnRep_CurrentRecipe() const;
 	
 	UPROPERTY(BlueprintReadOnly, Replicated, ReplicatedUsing = OnRep_EndTimestamp)
 	double EndTimestamp;
@@ -48,4 +50,10 @@ public:
 	//Indexed by tier.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (ClampMin = 0))
 	TArray<float> TierSpeedMultipliers;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnUpdateLab OnUpdateEndTimestamp;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnUpdateLab OnUpdateCurrentRecipe;
 };

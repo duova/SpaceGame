@@ -34,15 +34,34 @@ void ALabBuildingBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 
 bool ALabBuildingBase::ResearchRecipe(const int32 RecipeId)
 {
+	if (!GetOwner()->HasAuthority()) return false;
 	if (GameState->Recipes.Num() <= RecipeId) return false;
 	if (!InputItems(GameState->Recipes[RecipeId].Inputs)) return false;
 	CurrentRecipe = RecipeId;
 	MARK_PROPERTY_DIRTY_FROM_NAME(ALabBuildingBase, CurrentRecipe, this);
+	OnRep_CurrentRecipe();
 	const uint16 SpeedMultiplierTier = FMath::Min(Tier, TierSpeedMultipliers.Num() - 1);
 	EndTimestamp = GameState->Recipes[RecipeId].ResearchBaseTime * TierSpeedMultipliers[SpeedMultiplierTier] + GetWorld()
 		->GetTimeSeconds();
 	MARK_PROPERTY_DIRTY_FROM_NAME(ALabBuildingBase, EndTimestamp, this);
+	OnRep_EndTimestamp();
 	return true;
+}
+
+void ALabBuildingBase::OnRep_EndTimestamp() const
+{
+	if (OnUpdateEndTimestamp.IsBound())
+	{
+		OnUpdateEndTimestamp.Broadcast();
+	}
+}
+
+void ALabBuildingBase::OnRep_CurrentRecipe() const
+{
+	if (OnUpdateCurrentRecipe.IsBound())
+	{
+		OnUpdateCurrentRecipe.Broadcast();
+	}
 }
 
 void ALabBuildingBase::Tick(float DeltaTime)
@@ -55,9 +74,11 @@ void ALabBuildingBase::Tick(float DeltaTime)
 	{
 		EndTimestamp = 0;
 		MARK_PROPERTY_DIRTY_FROM_NAME(ALabBuildingBase, EndTimestamp, this);
+		OnRep_EndTimestamp();
 		GameState->Recipes[CurrentRecipe].bUnlocked = true;
 		GameState->MarkRecipesDirty();
 		CurrentRecipe = INDEX_NONE;
 		MARK_PROPERTY_DIRTY_FROM_NAME(ALabBuildingBase, CurrentRecipe, this);
+		OnRep_CurrentRecipe();
 	}
 }

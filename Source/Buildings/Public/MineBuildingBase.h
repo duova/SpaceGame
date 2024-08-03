@@ -6,6 +6,8 @@
 #include "ItemBuildingBase.h"
 #include "MineBuildingBase.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnUpdateMine);
+
 UCLASS(Abstract)
 class BUILDINGS_API AMineBuildingBase : public AItemBuildingBase
 {
@@ -38,6 +40,9 @@ public:
 
 	virtual void OnChangeTier() override;
 
-	UFUNCTION(BlueprintImplementableEvent)
-	void OnRep_RatePerMinute();
+	UFUNCTION()
+	void OnRep_RatePerMinute() const;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnUpdateMine OnUpdateRatePerMinute;
 };

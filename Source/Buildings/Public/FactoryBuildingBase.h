@@ -9,6 +9,8 @@
 struct FRecipe;
 class AGameGs;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnUpdateFactory);
+
 //Previous states are assumed to be active, e.g. if factory is lacking output it can be assumed that the recipe is set.
 UENUM(BlueprintType)
 enum class EFactoryStatus : uint8
@@ -52,17 +54,17 @@ protected:
 	
 	void CheckAndStart(const FRecipe& Recipe);
 
-	UFUNCTION(BlueprintImplementableEvent)
-	void OnRep_Progress();
+	UFUNCTION()
+	void OnRep_Progress() const;
 
-	UFUNCTION(BlueprintImplementableEvent)
-	void OnRep_CurrentRecipe();
+	UFUNCTION()
+	void OnRep_CurrentRecipe() const;
 
-	UFUNCTION(BlueprintImplementableEvent)
-	void OnRep_RemainingCount();
+	UFUNCTION()
+	void OnRep_RemainingCount() const;
 
-	UFUNCTION(BlueprintImplementableEvent)
-	void OnRep_Status();
+	UFUNCTION()
+	void OnRep_Status() const;
 	
 
 public:
@@ -87,4 +89,16 @@ public:
 	//Indexed by tier. Keep in mind the factory ticks at a max of 5/s.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (ClampMin = 0))
 	TArray<float> TierSpeedMultipliers;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnUpdateFactory OnUpdateProgress;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnUpdateFactory OnUpdateCurrentRecipe;
+	
+	UPROPERTY(BlueprintAssignable)
+	FOnUpdateFactory OnUpdateRemainingCount;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnUpdateFactory OnUpdateStatus;
 };
