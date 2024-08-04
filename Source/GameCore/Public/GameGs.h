@@ -6,9 +6,33 @@
 #include "GameFramework/GameState.h"
 #include "GameGs.generated.h"
 
+class ABuilding;
 class UItem;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnRepUnlocks);
+
+USTRUCT(BlueprintType)
+struct FUniquelyNamedBuilding
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly)
+	ABuilding* Building;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString Name;
+
+	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess);
+};
+
+template <>
+struct TStructOpsTypeTraits<FUniquelyNamedBuilding> : public TStructOpsTypeTraitsBase2<FUniquelyNamedBuilding>
+{
+	enum
+	{
+		WithNetSerializer = true
+	};
+};
 
 USTRUCT(BlueprintType)
 struct GAMECORE_API FItemDescriptor
@@ -101,4 +125,28 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	TArray<TSubclassOf<UItem>> ItemRegistry;
+
+	UPROPERTY(BlueprintReadOnly, Replicated, ReplicatedUsing = OnRep_UniquelyNamedBuildings)
+	TArray<FUniquelyNamedBuilding> UniquelyNamedBuildings;
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+	bool AddUniquelyNamedBuilding(const FString& Name, ABuilding* Building);
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+	bool RemoveUniquelyNamedBuilding(ABuilding* Building);
+
+	UFUNCTION(BlueprintPure)
+	bool UniqueBuildingNameAvailable(const FString& Name);
+
+	UFUNCTION(BlueprintPure)
+	ABuilding* GetBuildingByUniqueName(const FString& Name);
+
+	UFUNCTION(BlueprintPure)
+	FString GetUniqueNameByBuilding(const ABuilding* Building);
+
+	UFUNCTION(BlueprintPure)
+	TArray<FString> GetAllUniqueBuildingNames();
+
+	UFUNCTION()
+	void OnRep_UniquelyNamedBuildings();
 };

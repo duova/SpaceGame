@@ -134,6 +134,11 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	bool RemoveItemsBatched(const TArray<FItemDescriptor>& Items);
 
+	//Will attempt to move as much as possible from a local inventory to another inventory.
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+	void TransferInventory(UInventoryComponent* OtherInventoryComponent, const FGameplayTag OtherInventoryIdentifier,
+						 const FGameplayTag LocalInventoryIdentifier, const bool bStackIfPossible = true);
+
 	bool InternalHasItems(const TArray<FItemDescriptor>& Items, TMap<const TSubclassOf<UItem>, int32>& OutJoinedItemRequirements) const;
 	
 	UFUNCTION(BlueprintPure)
@@ -175,7 +180,9 @@ public:
 	static TMap<const TSubclassOf<UItem>, int32> GetJoinedRequirements(const TArray<FItemDescriptor>& Items);
 
 	UFUNCTION(BlueprintCallable)
-	void InternalOnItemUpdate() const;
+	void InternalOnItemUpdate();
+
+	bool bPendingItemUpdateBroadcast = true;
 
 protected:
 	bool RegisterAbilities(UItem* Item, const FInventory& Inventory);

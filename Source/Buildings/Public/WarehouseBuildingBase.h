@@ -6,6 +6,8 @@
 #include "Building.h"
 #include "WarehouseBuildingBase.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnUpdateWarehouse);
+
 class UInventoryComponent;
 
 UCLASS(Abstract)
@@ -41,7 +43,10 @@ public:
 
 	UPROPERTY(Replicated, BlueprintReadOnly, ReplicatedUsing = OnRep_Filter)
 	TSubclassOf<UItem> Filter;
+	
+	UFUNCTION()
+	void OnRep_Filter() const;
 
-	UFUNCTION(BlueprintImplementableEvent)
-	void OnRep_Filter();
+	UPROPERTY(BlueprintAssignable)
+	FOnUpdateWarehouse OnUpdateFilter;
 };

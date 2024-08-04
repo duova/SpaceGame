@@ -24,7 +24,7 @@ bool FInventory::NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess)
 
 UInventoryComponent::UInventoryComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = true;
 	SetIsReplicatedByDefault(true);
 	bReplicateUsingRegisteredSubObjectList = true;
 }
@@ -91,6 +91,15 @@ void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                         FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (bPendingItemUpdateBroadcast)
+	{
+		if (OnItemUpdate.IsBound())
+		{
+			OnItemUpdate.Broadcast();
+		}
+		bPendingItemUpdateBroadcast = false;
+	}
 }
 
 void UInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -346,9 +355,9 @@ void UInventoryComponent::InternalMoveOrSwapItems(UInventoryComponent* OtherInve
 	MARK_PROPERTY_DIRTY_FROM_NAME(UInventoryComponent, Inventories, OtherInventoryComponent);
 }
 
-void UInventoryComponent::InternalOnItemUpdate() const
+void UInventoryComponent::InternalOnItemUpdate()
 {
-	if (OnItemUpdate.IsBound()) OnItemUpdate.Broadcast();
+	bPendingItemUpdateBroadcast = true;
 }
 
 bool UInventoryComponent::MoveOrSwapItem(UInventoryComponent* OtherInventoryComponent,
@@ -512,6 +521,18 @@ bool UInventoryComponent::RemoveItemsBatched(const TArray<FItemDescriptor>& Item
 	}
 
 	return true;
+}
+
+void UInventoryComponent::TransferInventory(UInventoryComponent* OtherInventoryComponent,
+	const FGameplayTag OtherInventoryIdentifier, const FGameplayTag LocalInventoryIdentifier,
+	const bool bStackIfPossible)
+{
+	const FInventory* Inventory = GetInventory(LocalInventoryIdentifier);
+	if (!Inventory) return;
+	for (const UItem* Item : Inventory->Items)
+	{
+		MoveItemAnySlot(OtherInventoryComponent, OtherInventoryIdentifier, Item->OwningInvIdentifier, Item->OwningInvIndex, bStackIfPossible);
+	}
 }
 
 bool UInventoryComponent::InternalHasItems(const TArray<FItemDescriptor>& Items,

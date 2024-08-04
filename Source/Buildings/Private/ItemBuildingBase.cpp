@@ -121,7 +121,7 @@ void AItemBuildingBase::RefreshNearbyInventories()
 
 	NearbyInventories.Sort([this](const UInventoryComponent& A, const UInventoryComponent& B)
 	{
-		return A.Character->GetSquaredDistanceTo(this) < B.Character->GetSquaredDistanceTo(this);
+		return A.GetOwner()->GetSquaredDistanceTo(this) < B.GetOwner()->GetSquaredDistanceTo(this);
 	});
 }
 

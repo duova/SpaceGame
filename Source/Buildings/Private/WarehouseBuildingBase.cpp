@@ -48,5 +48,14 @@ void AWarehouseBuildingBase::SetFilter(const TSubclassOf<UItem> Item)
 {
 	Filter = Item;
 	MARK_PROPERTY_DIRTY_FROM_NAME(AWarehouseBuildingBase, Filter, this);
+	OnRep_Filter();
+}
+
+void AWarehouseBuildingBase::OnRep_Filter() const
+{
+	if (OnUpdateFilter.IsBound())
+	{
+		OnUpdateFilter.Broadcast();
+	}
 }
 

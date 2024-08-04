@@ -8,7 +8,7 @@
 #include "GameFramework/Actor.h"
 #include "Building.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnUpdateTier);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnUpdateBuilding);
 DECLARE_MULTICAST_DELEGATE(FStaticOnUpdateTier);
 
 class UNiagaraComponent;
@@ -96,7 +96,10 @@ public:
 	FGameplayTag CostDisplayInventory;
 
 	UPROPERTY(BlueprintAssignable)
-	FOnUpdateTier OnUpdateTier;
+	FOnUpdateBuilding OnUpdateTier;
 
 	FStaticOnUpdateTier InternalOnUpdateTier;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnUpdateBuilding OnUpdateUniqueName;
 };
