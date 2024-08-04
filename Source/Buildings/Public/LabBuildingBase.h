@@ -32,6 +32,12 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	bool ResearchRecipe(const int32 RecipeId, UInventoryComponent* InvCom);
 
+	UFUNCTION(BlueprintPure)
+	float GetRemainingTime() const;
+
+	UFUNCTION(BlueprintPure)
+	float GetProgress();
+
 	UFUNCTION()
 	void OnRep_EndTimestamp() const;
 

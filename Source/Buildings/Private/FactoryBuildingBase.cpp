@@ -10,7 +10,7 @@
 
 AFactoryBuildingBase::AFactoryBuildingBase(): Progress(0), RemainingCount(0), Status()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickInterval = 0.2;
 }
 
@@ -60,6 +60,14 @@ bool AFactoryBuildingBase::ChangeCount(const int32 Count)
 	return true;
 }
 
+float AFactoryBuildingBase::GetRemainingTime()
+{
+	if (CurrentRecipe < 0) return 0;
+	if (CurrentRecipe >= GameState->Recipes.Num()) return 0;
+	const FRecipe& Recipe = GameState->Recipes[CurrentRecipe];
+	return (1 - Progress) / (TierSpeedMultipliers[Tier] / FMath::Max(0.1, Recipe.RecipeBaseTime));
+}
+
 void AFactoryBuildingBase::BeginPlay()
 {
 	Super::BeginPlay();
@@ -80,12 +88,15 @@ void AFactoryBuildingBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME_WITH_PARAMS_FAST(AFactoryBuildingBase, Status, RepParams);
 }
 
-void AFactoryBuildingBase::RunRecipe()
+void AFactoryBuildingBase::RunRecipe(const FRecipe& Recipe)
 {
 	RemainingCount--;
 	MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, RemainingCount, this);
 	OnRep_RemainingCount();
 	Status = EFactoryStatus::Running;
+	MARK_PROPERTY_DIRTY_FROM_NAME(AFactoryBuildingBase, Status, this);
+	OnRep_Status();
+	InputItems(Recipe.Inputs, true);
 }
 
 void AFactoryBuildingBase::CheckAndStart(const FRecipe& Recipe)
@@ -104,7 +115,7 @@ void AFactoryBuildingBase::CheckAndStart(const FRecipe& Recipe)
 	}
 	else
 	{
-		RunRecipe();
+		RunRecipe(Recipe);
 	}
 }
 

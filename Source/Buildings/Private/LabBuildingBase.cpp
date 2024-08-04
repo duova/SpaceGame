@@ -50,6 +50,18 @@ bool ALabBuildingBase::ResearchRecipe(const int32 RecipeId, UInventoryComponent*
 	return true;
 }
 
+float ALabBuildingBase::GetRemainingTime() const
+{
+	return FMath::Max(0, EndTimestamp - GetWorld()->TimeSeconds);
+}
+
+float ALabBuildingBase::GetProgress()
+{
+	if (CurrentRecipe == INDEX_NONE) return 0;
+	const uint16 SpeedMultiplierTier = FMath::Min(Tier, TierSpeedMultipliers.Num() - 1);
+	return 1 - GetRemainingTime() / (GameState->Recipes[CurrentRecipe].ResearchBaseTime / TierSpeedMultipliers[SpeedMultiplierTier]);
+}
+
 void ALabBuildingBase::OnRep_EndTimestamp() const
 {
 	if (OnUpdateEndTimestamp.IsBound())

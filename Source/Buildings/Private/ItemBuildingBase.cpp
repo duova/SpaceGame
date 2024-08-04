@@ -27,7 +27,8 @@ bool AItemBuildingBase::InternalHasItems(const TMap<const TSubclassOf<UItem>, in
 	TMap<const TSubclassOf<UItem>, int32> JoinedItemRequirementsCopy = JoinedItemRequirements;
 	for (const UInventoryComponent* NearbyInvComp : NearbyInventories)
 	{
-		for (const UItem* Item : NearbyInvComp->GetItemsInAllInventories())
+		if (NearbyInvComp->Inventories.Num() == 0) return false;
+		for (const UItem* Item : NearbyInvComp->Inventories[0].Items)
 		{
 			if (!JoinedItemRequirementsCopy.Contains(Item->GetClass())) continue;
 			JoinedItemRequirementsCopy[Item->GetClass()] -= Item->Count;
@@ -46,7 +47,8 @@ bool AItemBuildingBase::HasItems(const TArray<FItemDescriptor>& Items)
 {
 	RefreshNearbyInventories();
 
-	const TMap<const TSubclassOf<UItem>, int32> JoinedItemRequirements = UInventoryComponent::GetJoinedRequirements(Items);
+	const TMap<const TSubclassOf<UItem>, int32> JoinedItemRequirements =
+		UInventoryComponent::GetJoinedRequirements(Items);
 
 	return InternalHasItems(JoinedItemRequirements);
 }
@@ -55,22 +57,22 @@ bool AItemBuildingBase::InputItems(const TArray<FItemDescriptor>& Items, const b
 {
 	RefreshNearbyInventories();
 
-	TMap<const TSubclassOf<UItem>, int32> JoinedItemRequirements =  UInventoryComponent::GetJoinedRequirements(Items);
-	
+	TMap<const TSubclassOf<UItem>, int32> JoinedItemRequirements = UInventoryComponent::GetJoinedRequirements(Items);
+
 	if (!bAssumeEnoughItems && !InternalHasItems(JoinedItemRequirements)) return false;
 
 	for (UInventoryComponent* NearbyInvComp : NearbyInventories)
 	{
-		for (FInventory& Inventory : NearbyInvComp->Inventories)
+		if (NearbyInvComp->Inventories.Num() == 0) return false;
+		FInventory& Inventory = NearbyInvComp->Inventories[0];
+		for (uint16 i = 0; i < Inventory.Items.Num(); i++)
 		{
-			for (uint16 i = 0; i < Inventory.Items.Num(); i++)
-			{
-				UItem* Item = Inventory.Items[i];
-				if (!JoinedItemRequirements.Contains(Item->GetClass())) continue;
-				int32 TransferCount = FMath::Min(Item->Count, JoinedItemRequirements[Item->GetClass()]);
-				NearbyInvComp->RemoveItem(Inventory.InventoryIdentifier, i, TransferCount);
-				JoinedItemRequirements[Item->GetClass()] -= TransferCount;
-			}
+			const UItem* Item = Inventory.Items[i];
+			if (!JoinedItemRequirements.Contains(Item->GetClass())) continue;
+			const int32 TransferCount = FMath::Min(Item->Count, JoinedItemRequirements[Item->GetClass()]);
+			if (TransferCount <= 0) continue;
+			NearbyInvComp->RemoveItem(Inventory.InventoryIdentifier, i, TransferCount);
+			JoinedItemRequirements[Item->GetClass()] -= TransferCount;
 		}
 	}
 
@@ -116,7 +118,7 @@ void AItemBuildingBase::RefreshNearbyInventories()
 		if (!Warehouse) continue;
 		NearbyInventories.Add(Warehouse->InventoryComponent);
 	}
-	
+
 	NearbyInventories.Sort([this](const UInventoryComponent& A, const UInventoryComponent& B)
 	{
 		return A.Character->GetSquaredDistanceTo(this) < B.Character->GetSquaredDistanceTo(this);
@@ -130,7 +132,7 @@ bool AItemBuildingBase::TryFlush()
 	for (UInventoryComponent* InvComp : NearbyInventories)
 	{
 		const TSubclassOf<UItem>& Filter = Cast<AWarehouseBuildingBase>(InvComp->GetOwner())->Filter;
-		
+
 		TArray<FGameplayTag> InventoryIds;
 
 		for (const FInventory& Inventory : InvComp->Inventories)
@@ -154,7 +156,7 @@ bool AItemBuildingBase::TryFlush()
 	{
 		if (Item->GetClass() != Buffer->GetInventory(FGameplayTag())->EmptyItemClass) return false;
 	}
-	
+
 	return true;
 }
 

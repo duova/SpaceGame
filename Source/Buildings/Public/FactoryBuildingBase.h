@@ -42,6 +42,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	bool ChangeCount(const int32 Count);
 
+	UFUNCTION(BlueprintPure)
+	float GetRemainingTime();
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -50,7 +53,7 @@ protected:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	void RunRecipe();
+	void RunRecipe(const FRecipe& Recipe);
 	
 	void CheckAndStart(const FRecipe& Recipe);
 
