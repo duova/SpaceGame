@@ -7,12 +7,15 @@ public class SpaceGameTarget : TargetRules
 {
 	public SpaceGameTarget(TargetInfo Target) : base(Target)
 	{
+		//BuildEnvironment = TargetBuildEnvironment.Unique;
+		//bOverrideBuildEnvironment = true;
+		bWithPushModel = true;
+		bUsesSteam = true;
 		Type = TargetType.Game;
 		DefaultBuildSettings = BuildSettingsVersion.V5;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_4;
 		ExtraModuleNames.Add("SpaceGame");
 		RegisterModulesCreatedByRider();
-		bWithPushModel = true;
 	}
 
 	private void RegisterModulesCreatedByRider()
