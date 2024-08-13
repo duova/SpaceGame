@@ -40,6 +40,10 @@
 		{
 			"Name": "OnlineSubsystemSteam",
 			"Enabled": true
+		},
+		{
+			"Name": "KaiSaveSystem",
+			"Enabled": false
 		}
 	]
 }

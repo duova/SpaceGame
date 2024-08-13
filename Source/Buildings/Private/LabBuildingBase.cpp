@@ -52,7 +52,7 @@ bool ALabBuildingBase::ResearchRecipe(const int32 RecipeId, UInventoryComponent*
 
 float ALabBuildingBase::GetRemainingTime() const
 {
-	return FMath::Max(0, EndTimestamp - GetWorld()->TimeSeconds);
+	return FMath::Max(0, EndTimestamp - GameState->GetServerWorldTimeSeconds());
 }
 
 float ALabBuildingBase::GetProgress()
