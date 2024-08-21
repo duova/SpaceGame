@@ -11,8 +11,8 @@ USTRUCT()
 struct JUNCTURESAVE_API FJsSaveArchive : public FObjectAndNameAsStringProxyArchive
 {
 	GENERATED_BODY()
-	
-	FJsSaveArchive(FArchive& InInnerArchive)
+
+	explicit FJsSaveArchive(FArchive& InInnerArchive)
 		: FObjectAndNameAsStringProxyArchive(InInnerArchive, true)
 	{
 		ArIsSaveGame = true;
