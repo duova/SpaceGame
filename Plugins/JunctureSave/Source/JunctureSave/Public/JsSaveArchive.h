@@ -5,13 +5,9 @@
 #include "CoreMinimal.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 #include "UObject/Object.h"
-#include "JsSaveArchive.generated.h"
 
-USTRUCT()
 struct JUNCTURESAVE_API FJsSaveArchive : public FObjectAndNameAsStringProxyArchive
 {
-	GENERATED_BODY()
-
 	explicit FJsSaveArchive(FArchive& InInnerArchive)
 		: FObjectAndNameAsStringProxyArchive(InInnerArchive, true)
 	{

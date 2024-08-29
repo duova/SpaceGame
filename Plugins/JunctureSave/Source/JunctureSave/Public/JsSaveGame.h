@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "JsObjectRecord.h"
 #include "GameFramework/SaveGame.h"
 #include "JsSaveGame.generated.h"
 
@@ -58,8 +59,12 @@ public:
 	
 	void RegisterMapObject(UObject* MapObject);
 
-	//Spawn AddedObject from save.
-	void PreloadObject(UWorld* World, FJsObjectRecord& ObjectRecord);
+	void SaveObject(UObject* Object, FJsObjectRecord& ObjectRecord, const bool bIsMapObject);
+	
+	//Spawn DynamicObject from save.
+	UObject* PreloadObject(UWorld* World, FJsObjectRecord& ObjectRecord);
+
+	void LoadObject(UObject* Object, FJsObjectRecord& ObjectRecord);
 
 	static void SaveData(UObject* Object, TArray<uint8>& Data);
 

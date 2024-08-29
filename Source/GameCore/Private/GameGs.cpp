@@ -22,6 +22,16 @@ bool FUniquelyNamedBuilding::NetSerialize(FArchive& Ar, UPackageMap* Map, bool& 
 	return bOutSuccess;
 }
 
+FUniquelyNamedBuilding::FUniquelyNamedBuilding(): Building(nullptr)
+{
+}
+
+FUniquelyNamedBuilding::FUniquelyNamedBuilding(ABuilding* InBuilding, const FString& InName)
+{
+	Building = InBuilding;
+	Name = InName;
+}
+
 FItemDescriptor::FItemDescriptor(): ItemCount(0)
 {
 }

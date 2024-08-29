@@ -6,7 +6,6 @@
 #include "GameGs.h"
 #include "InventoryComponent.h"
 #include "Item.h"
-#include "../../../../../../../../Program Files/Epic Games/UE_5.4/Engine/Plugins/FX/Niagara/Source/Niagara/Public/NiagaraComponent.h"
 #include "Net/UnrealNetwork.h"
 
 

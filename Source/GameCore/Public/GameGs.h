@@ -23,6 +23,10 @@ struct FUniquelyNamedBuilding
 	FString Name;
 
 	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess);
+
+	FUniquelyNamedBuilding();
+
+	FUniquelyNamedBuilding(ABuilding* InBuilding, const FString& InName);
 };
 
 template <>
