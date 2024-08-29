@@ -5,3 +5,6 @@
 
 
 // Add default functionality here for any IDirtiableInterface functions that are not pure virtual.
+void IDirtiableInterface::MarkDirty()
+{
+}
