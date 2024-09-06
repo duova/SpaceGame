@@ -3,17 +3,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "JsObjectRecord.h"
+#include "JsActorRecord.h"
 #include "GameFramework/SaveGame.h"
 #include "JsSaveGame.generated.h"
 
-struct FJsObjectRecord;
+struct FJsActorRecord;
 
 /**
- * Save: BindWorld(before any world changes) -> MarkObjectDirty -> (Async)SaveGameToSlot.
- * Load: BindWorld(before any world changes) -> (Async)LoadGameFromSlot -> ReproduceWorld.
- * Use MarkObjectDirty to add an object to the save game.
- * Ensure references to objects are marked with SaveGame for GC.
+ * Save: MarkActorDirty -> SerializeActors -> (Async)SaveGameToSlot.
+ * Load: (Async)LoadGameFromSlot -> DeserializeActors.
+ * Use MarkDirty to save or resave an Actor the next time SerializeActors() is called.
  */
 UCLASS(Blueprintable)
 class JUNCTURESAVE_API UJsSaveGame : public USaveGame
@@ -21,54 +20,44 @@ class JUNCTURESAVE_API UJsSaveGame : public USaveGame
 	GENERATED_BODY()
 
 public:
-	//Object records that are written to and read from the disk.
+	//Actor records that are written to and read from the disk.
 	UPROPERTY()
-	TArray<FJsObjectRecord> ObjectRecords;
+	TArray<FJsActorRecord> ActorRecords;
 
-	//Tracked non-map objects with their respective record index.
+	//Tracked non-map actors with their respective record index.
 	UPROPERTY(Transient)
-	TMap<UObject*, int32> DynamicObjects;
+	TMap<UObject*, int32> DynamicActors;
 
-	//Tracked map objects with their respective record index.
+	//Tracked map actors with their respective record index.
 	UPROPERTY(Transient)
-	TMap<UObject*, int32> MapObjects;
+	TMap<UObject*, int32> MapActors;
 
-	//Objects with outdated records.
+	//Actors with outdated records.
 	UPROPERTY(Transient)
-	TSet<UObject*> DirtyObjects;
-
-	//Used to track actor destroys with listener or specify which world to reproduce to.
-	UPROPERTY()
-	UWorld* BoundWorld;
-
-	//Used to see which actor destroys to actually save and which ones to just remove from dynamic objects.
-	UPROPERTY()
-	TSet<AActor*> MapActors;
+	TSet<UObject*> DirtyActors;
 
 public:
 	UFUNCTION(BlueprintCallable)
-	void BindWorld(UWorld* World);
-	
-	UFUNCTION(BlueprintCallable)
-	void ReproduceWorld();
+	void DeserializeActors();
 
 	UFUNCTION(BlueprintCallable)
-	void MarkObjectDirty(UObject* Object, bool bIsMapObject);
+	void MarkActorDirty(AActor* Actor, bool bIsMapActor);
+
+	UFUNCTION(BlueprintCallable)
+	void MarkActorDestroyed(AActor* Actor);
+
+	void RegisterDynamicActor(AActor* DynamicActor);
 	
-	void RegisterDynamicObject(UObject* DynamicObject);
+	void RegisterMapActor(AActor* MapActor);
+
+	void SaveActor(AActor* Actor, FJsActorRecord& ActorRecord, const bool bIsMapActor);
 	
-	void RegisterMapObject(UObject* MapObject);
+	//Spawn DynamicActor from save.
+	UObject* PreloadActor(UWorld* World, const FJsActorRecord& ActorRecord);
 
-	void SaveObject(UObject* Object, FJsObjectRecord& ObjectRecord, const bool bIsMapObject);
-	
-	//Spawn DynamicObject from save.
-	UObject* PreloadObject(UWorld* World, FJsObjectRecord& ObjectRecord);
+	void LoadActor(AActor* Actor, FJsActorRecord& ActorRecord);
 
-	void LoadObject(UObject* Object, FJsObjectRecord& ObjectRecord);
+	static void SaveData(AActor* Actor, TArray<uint8>& Data);
 
-	static void SaveData(UObject* Object, TArray<uint8>& Data);
-
-	static void LoadData(UObject* Object, TArray<uint8>& Data);
-
-	void OnWorldActorDestroyed(AActor* Actor);
+	static void LoadData(AActor* Actor, TArray<uint8>& Data);
 };
