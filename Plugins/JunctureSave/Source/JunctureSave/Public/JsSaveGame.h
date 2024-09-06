@@ -13,6 +13,7 @@ struct FJsActorRecord;
  * Save: MarkActorDirty -> SerializeActors -> (Async)SaveGameToSlot.
  * Load: (Async)LoadGameFromSlot -> DeserializeActors.
  * Use MarkDirty to save or resave an Actor the next time SerializeActors() is called.
+ * Use MarkActorDestroyed after destroying a saved actor.
  */
 UCLASS(Blueprintable)
 class JUNCTURESAVE_API UJsSaveGame : public USaveGame
@@ -26,17 +27,20 @@ public:
 
 	//Tracked non-map actors with their respective record index.
 	UPROPERTY(Transient)
-	TMap<UObject*, int32> DynamicActors;
+	TMap<AActor*, int32> DynamicActors;
 
 	//Tracked map actors with their respective record index.
 	UPROPERTY(Transient)
-	TMap<UObject*, int32> MapActors;
+	TMap<AActor*, int32> MapActors;
 
 	//Actors with outdated records.
 	UPROPERTY(Transient)
-	TSet<UObject*> DirtyActors;
+	TSet<AActor*> DirtyActors;
 
 public:
+	UFUNCTION(BlueprintCallable)
+	void SerializeActors();
+	
 	UFUNCTION(BlueprintCallable)
 	void DeserializeActors();
 
@@ -53,9 +57,9 @@ public:
 	void SaveActor(AActor* Actor, FJsActorRecord& ActorRecord, const bool bIsMapActor);
 	
 	//Spawn DynamicActor from save.
-	UObject* PreloadActor(UWorld* World, const FJsActorRecord& ActorRecord);
+	AActor* PreloadDynamicActor(UWorld* World, const int32 ActorRecordIndex);
 
-	void LoadActor(AActor* Actor, FJsActorRecord& ActorRecord);
+	void LoadActor(AActor* Actor, const int32 ActorRecordIndex);
 
 	static void SaveData(AActor* Actor, TArray<uint8>& Data);
 

@@ -8,7 +8,7 @@ bool IJsSavableActorInterface::JsSerialize(FArchive& Ar)
 	return false;
 }
 
-bool IJsSavableActorInterface::JsPostSerialize()
+bool IJsSavableActorInterface::JsPostDeserialize()
 {
 	return false;
 }

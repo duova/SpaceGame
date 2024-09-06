@@ -22,7 +22,7 @@ struct FJsActorRecord
 	int32 OuterID;
 	
 	UPROPERTY(BlueprintReadWrite)
-	UObject* Self;
+	AActor* Self;
 	
 	UPROPERTY(BlueprintReadWrite)
 	FName Name;
@@ -33,6 +33,9 @@ struct FJsActorRecord
 	UPROPERTY(BlueprintReadWrite)
 	FTransform Transform;
 
+	UPROPERTY(BlueprintReadWrite)
+	bool bDestroyed;
+
 	FJsActorRecord()
 	{
 		//-2 is for MapActors.
@@ -40,5 +43,30 @@ struct FJsActorRecord
 		Class = nullptr;
 		Outer = nullptr;
 		Self = nullptr;
+		bDestroyed = false;
 	}
+
+	bool Serialize(FArchive& Ar)
+	{
+		Ar << bDestroyed;
+		Ar << Self;
+		if (!bDestroyed)
+		{
+			Ar << Class;
+			Ar << Outer;
+			Ar << OuterID;
+			Ar << Name;
+			Ar << Data;
+			Ar << Transform;
+		}
+		return true;
+	}
+};
+
+template<> struct TStructOpsTypeTraits<FJsActorRecord> : public TStructOpsTypeTraitsBase2<FJsActorRecord>
+{
+	enum
+	{
+		WithSerializer = true
+	};
 };

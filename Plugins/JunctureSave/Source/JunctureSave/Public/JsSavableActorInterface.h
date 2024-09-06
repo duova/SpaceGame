@@ -18,7 +18,9 @@ class IJsSavableActorInterface
 
 public:
 
+	//Both serialize and deserialize.
 	virtual bool JsSerialize(FArchive& Ar);
 
-	virtual bool JsPostSerialize();
+	//Only called post deserialize.
+	virtual bool JsPostDeserialize();
 };

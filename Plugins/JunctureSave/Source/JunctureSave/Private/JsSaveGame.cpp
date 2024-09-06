@@ -7,11 +7,60 @@
 #include "JsSaveArchive.h"
 #include "JunctureSave.h"
 
+void UJsSaveGame::SerializeActors()
+{
+	for (AActor* Actor : DirtyActors)
+	{
+		if (MapActors.Contains(Actor))
+		{
+			SaveActor(Actor, ActorRecords[MapActors[Actor]], true);
+		}
+		else if (DynamicActors.Contains(Actor))
+		{
+			SaveActor(Actor, ActorRecords[MapActors[Actor]], false);
+		}
+	}
+	DirtyActors.Empty();
+}
+
 void UJsSaveGame::DeserializeActors()
 {
-	//Do owner first after preloading.
-	//Then make sure we link all components to actors and do attachments simultaneously.
-	//Then LoadObject.
+	for (int32 i = 0; i < ActorRecords.Num(); i++)
+	{
+		//Deal with map actor destruction, and don't spawn for destroyed dynamic actor.
+		if (ActorRecords[i].bDestroyed)
+		{
+			if (ActorRecords[i].Self)
+			{
+				GetWorld()->DestroyActor(ActorRecords[i].Self);
+			}
+			continue;
+		}
+
+		//Recreate dynamic actors, recreate tracking list for map and dynamic actors.
+		if (ActorRecords[i].Self)
+		{
+			MapActors.Add(ActorRecords[i].Self, i);
+		}
+		else
+		{
+			AActor* DynamicActor = PreloadDynamicActor(GetWorld(), i);
+			DynamicActors.Add(DynamicActor, i);
+			ActorRecords[i].Self = DynamicActor;
+		}
+	}
+	
+	for (int32 i = 0; i < ActorRecords.Num(); i++)
+	{
+		LoadActor(ActorRecords[i].Self, i);
+	}
+
+	for (const FJsActorRecord& Record : ActorRecords)
+	{
+		if (Record.bDestroyed) continue;
+		IJsSavableActorInterface* SavableActor = Cast<IJsSavableActorInterface>(Record.Self);
+		SavableActor->JsPostDeserialize();
+	}
 }
 
 void UJsSaveGame::MarkActorDirty(AActor* Actor, const bool bIsMapActor)
@@ -27,22 +76,34 @@ void UJsSaveGame::MarkActorDirty(AActor* Actor, const bool bIsMapActor)
 	DirtyActors.Add(Actor);
 }
 
+void UJsSaveGame::MarkActorDestroyed(AActor* Actor)
+{
+	if (MapActors.Contains(Actor))
+	{
+		ActorRecords[MapActors[Actor]].bDestroyed = true;
+	}
+	else if (DynamicActors.Contains(Actor))
+	{
+		ActorRecords[DynamicActors[Actor]].bDestroyed = true;
+	}
+}
+
 void UJsSaveGame::RegisterDynamicActor(AActor* DynamicActor)
 {
 	if (DynamicActors.Contains(DynamicActor)) return;
-	DynamicActors.Add(DynamicActor);
 	//Add a empty version to the record so we can reference owners with the index.
 	ActorRecords.Emplace();
 	ActorRecords.Last().Self = DynamicActor;
+	DynamicActors.Add(DynamicActor, ActorRecords.Num() - 1);
 }
 
 void UJsSaveGame::RegisterMapActor(AActor* MapActor)
 {
 	if (MapActors.Contains(MapActor)) return;
-	MapActors.Add(MapActor);
 	//Add a empty version to the record so we can reference owners with the index.
 	ActorRecords.Emplace();
 	ActorRecords.Last().Self = MapActor;
+	MapActors.Add(MapActor, ActorRecords.Num() - 1);
 }
 
 void UJsSaveGame::SaveActor(AActor* Actor, FJsActorRecord& ActorRecord, const bool bIsMapActor)
@@ -61,13 +122,13 @@ void UJsSaveGame::SaveActor(AActor* Actor, FJsActorRecord& ActorRecord, const bo
 
 	ActorRecord.Class = Actor->GetClass();
 
-	if (bIsMapActor)
+	if (Actor->GetOuter())
 	{
-		ActorRecord.Outer = Actor->GetOuter();
-	}
-	else
-	{
-		if (Actor->GetOuter())
+		if (MapActors.Contains(Cast<AActor>(Actor->GetOuter())))
+		{
+			ActorRecord.Outer = Actor->GetOuter();
+		}
+		else
 		{
 			for (uint8 i = 0; i < ActorRecords.Num(); i++)
 			{
@@ -79,14 +140,28 @@ void UJsSaveGame::SaveActor(AActor* Actor, FJsActorRecord& ActorRecord, const bo
 			}
 		}
 	}
+	else
+	{
+		ActorRecord.Outer = nullptr;
+		ActorRecord.OuterID = -2;
+	}
+
+	if (!bIsMapActor)
+	{
+		//We set self to nullptr if not a map actor to indicate this is the case after deserialization.
+		ActorRecord.Self = nullptr;
+	}
 
 	ActorRecord.Name = Actor->GetFName();
 
 	SaveData(Actor, ActorRecord.Data);
 }
 
-UObject* UJsSaveGame::PreloadActor(UWorld* World, const FJsActorRecord& ActorRecord)
+AActor* UJsSaveGame::PreloadDynamicActor(UWorld* World, const int32 ActorRecordIndex)
 {
+	if (ActorRecordIndex >= ActorRecords.Num() || ActorRecordIndex < 0) return nullptr;
+	FJsActorRecord& ActorRecord = ActorRecords[ActorRecordIndex];
+	if (ActorRecord.bDestroyed) return nullptr;
 	UObject* Outer;
 	if (ActorRecord.Outer)
 	{
@@ -115,9 +190,15 @@ UObject* UJsSaveGame::PreloadActor(UWorld* World, const FJsActorRecord& ActorRec
 	return Actor;
 }
 
-void UJsSaveGame::LoadActor(AActor* Actor, FJsActorRecord& ActorRecord)
+void UJsSaveGame::LoadActor(AActor* Actor, const int32 ActorRecordIndex)
 {
+	if (ActorRecordIndex >= ActorRecords.Num() || ActorRecordIndex < 0) return;
+	
+	if (!Actor) return;
 
+	FJsActorRecord& ActorRecord = ActorRecords[ActorRecordIndex];
+	
+	LoadData(Actor, ActorRecord.Data);
 }
 
 void UJsSaveGame::SaveData(AActor* Actor, TArray<uint8>& Data)
@@ -125,14 +206,14 @@ void UJsSaveGame::SaveData(AActor* Actor, TArray<uint8>& Data)
 	if (!Actor) return;
 
 	IJsSavableActorInterface* SavableActor = Cast<IJsSavableActorInterface>(Actor);
-	
+
 	if (!SavableActor) return;
-	
+
 	FMemoryWriter MemoryWriter = FMemoryWriter(Data, true);
 	FJsSaveArchive Ar = FJsSaveArchive(MemoryWriter);
 	Ar.SetIsSaving(true);
 	Ar.SetIsLoading(false);
-	
+
 	SavableActor->JsSerialize(Ar);
 }
 
@@ -141,13 +222,13 @@ void UJsSaveGame::LoadData(AActor* Actor, TArray<uint8>& Data)
 	if (!Actor) return;
 
 	IJsSavableActorInterface* SavableActor = Cast<IJsSavableActorInterface>(Actor);
-	
+
 	if (!SavableActor) return;
-	
+
 	FMemoryReader MemoryReader(Data, true);
 	FJsSaveArchive Ar(MemoryReader);
 	Ar.SetIsSaving(false);
 	Ar.SetIsLoading(true);
-	
+
 	SavableActor->JsSerialize(Ar);
 }
