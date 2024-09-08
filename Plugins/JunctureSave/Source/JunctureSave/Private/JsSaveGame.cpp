@@ -155,6 +155,8 @@ void UJsSaveGame::SaveActor(AActor* Actor, FJsActorRecord& ActorRecord, const bo
 	ActorRecord.Name = Actor->GetFName();
 
 	SaveData(Actor, ActorRecord.Data);
+	
+	ActorRecord.Transform = Actor->GetTransform();
 }
 
 AActor* UJsSaveGame::PreloadDynamicActor(UWorld* World, const int32 ActorRecordIndex)
@@ -197,6 +199,8 @@ void UJsSaveGame::LoadActor(AActor* Actor, const int32 ActorRecordIndex)
 	if (!Actor) return;
 
 	FJsActorRecord& ActorRecord = ActorRecords[ActorRecordIndex];
+
+	Actor->SetActorTransform(ActorRecord.Transform);
 	
 	LoadData(Actor, ActorRecord.Data);
 }
