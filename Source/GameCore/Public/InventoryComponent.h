@@ -172,6 +172,7 @@ public:
 
 	void OnInputUp(const UInputAction* Input, const UInputPayload* InputData);
 
+	UPROPERTY()
 	TMap<FGameplayAbilitySpecHandle, UItem*> AbilityRegistry;
 
 	UPROPERTY(Replicated, EditAnywhere, ReplicatedUsing = InternalOnItemUpdate)

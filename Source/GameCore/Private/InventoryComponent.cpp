@@ -407,6 +407,7 @@ bool UInventoryComponent::MoveOrSwapItem(UInventoryComponent* OtherInventoryComp
 		const uint16 TransferableCount = FMath::Min(Other->GetMaxStackSize() - Other->Count, Local->Count);
 		Other->Count += TransferableCount;
 		MARK_PROPERTY_DIRTY_FROM_NAME(UItem, Count, Other);
+		if (TransferableCount <= 0) return true;
 		RemoveItem(LocalInventoryIdentifier, LocalItemIndex, TransferableCount);
 		InternalOnItemUpdate();
 		OtherInventoryComponent->InternalOnItemUpdate();

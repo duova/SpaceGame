@@ -35,15 +35,18 @@ public:
 	UPROPERTY(Replicated, BlueprintReadOnly, ReplicatedUsing = OnRep_Count)
 	int32 Count = 1;
 
+	//GameplayAbilities added when this item is added.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<TSubclassOf<UGameplayAbility>> ItemAbilities;
-
+	
 	UPROPERTY(Replicated)
 	TArray<FGameplayAbilitySpecHandle> OrderedAbilityHandles;
 
+	//Tag for the GameplayEvent that should be passed to all abilities of this item when the inventory bound input is down.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FGameplayTag OnDownEvent;
 
+	//Tag for the GameplayEvent that should be passed to all abilities of this item when the inventory bound input is up.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FGameplayTag OnUpEvent;
 
